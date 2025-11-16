@@ -151,7 +151,7 @@ function SignUp() {
         }
 
         alert("Signup successful! Please check your email to verify your account.");
-        navigate("/login");
+        navigate("/confirm",{state: {email:formData.email}});
       }
     );
   };

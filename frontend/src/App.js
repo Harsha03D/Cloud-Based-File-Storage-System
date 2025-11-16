@@ -13,7 +13,8 @@ import Analytics from "./pages/Analytics";
 import Activities from "./pages/Activities";
 import Upload from "./pages/Upload";
 import About from "./pages/About";
-import ErrorPage from "./pages/Error"; // FIXED IMPORT NAME
+import ErrorPage from "./pages/Error"; 
+import ConfirmSignUp from "./ConfirmSignUp";
 
 // ---------------------------------------------
 // 🔐 Private Route Wrapper
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/about" element={<About />} />
+        <Route path="/confirm" element={<ConfirmSignUp />} />
 
         {/* Protected Routes */}
         <Route
