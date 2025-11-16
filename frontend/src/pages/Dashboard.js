@@ -1,26 +1,12 @@
 // src/pages/Dashboard.js
+
 import React, { useEffect, useState } from "react";
-import {
-  S3Client,
-  DeleteObjectCommand,
-  GetObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import {
-  DynamoDBDocumentClient,
-  ScanCommand,
-  DeleteCommand,
-} from "@aws-sdk/lib-dynamodb";
-import { fromCognitoIdentityPool } from "@aws-sdk/credential-provider-cognito-identity";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import PermissionModal from "./PermissionModal"; // 👈 import modal here
+import PermissionModal from "./PermissionModal";
+import axios from "axios";
 
-const region = process.env.REACT_APP_AWS_REGION || "us-east-1";
-const IDENTITY_POOL_ID = process.env.REACT_APP_IDENTITY_POOL_ID || "";
-const DDB_TABLE = process.env.REACT_APP_DYNAMODB_TABLE || "";
-const S3_BUCKET = process.env.REACT_APP_S3_BUCKET || "";
+const API_BASE = "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
 
 // Toast message
 function toast(msg, color = "#10b981") {
@@ -43,92 +29,60 @@ function toast(msg, color = "#10b981") {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [ddbItems, setDdbItems] = useState([]);
+
+  const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [clientsReady, setClientsReady] = useState(false);
-  const [s3Client, setS3Client] = useState(null);
-  const [ddbDocClient, setDdbDocClient] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null); // 👈 for modal
+  const [selectedFile, setSelectedFile] = useState(null);
 
-  const primary = "#6366f1"; // indigo
-  const secondary = "#8b5cf6"; // purple
-  const accent = "#38bdf8"; // sky blue
+  const primary = "#6366f1";
+  const secondary = "#8b5cf6";
+  const accent = "#38bdf8";
 
-  // AWS initialization
-  useEffect(() => {
-    const initClients = async () => {
-      try {
-        const credsProvider = fromCognitoIdentityPool({
-          clientConfig: { region },
-          identityPoolId: IDENTITY_POOL_ID,
-        });
-
-        const s3 = new S3Client({ region, credentials: credsProvider });
-        const ddb = new DynamoDBClient({ region, credentials: credsProvider });
-        const ddbDoc = DynamoDBDocumentClient.from(ddb);
-        setS3Client(s3);
-        setDdbDocClient(ddbDoc);
-        setClientsReady(true);
-      } catch {
-        toast("AWS initialization failed", "#ef4444");
-      }
-    };
-    initClients();
-  }, []);
-
-  useEffect(() => {
-    if (clientsReady) fetchFiles();
-  }, [clientsReady]);
-
+  // FETCH FILES FROM BACKEND
   const fetchFiles = async () => {
-    if (!ddbDocClient) return;
     setLoading(true);
     try {
-      const cmd = new ScanCommand({ TableName: DDB_TABLE });
-      const res = await ddbDocClient.send(cmd);
-      setDdbItems(res.Items || []);
+      const res = await axios.get(`${API_BASE}/files`);
+      setFiles(res.data.files || []);
+    } catch (err) {
+      toast("Failed to fetch files", "#ef4444");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchFiles();
+  }, []);
+
+  // DOWNLOAD FILE
+  const openFile = async (file) => {
+    try {
+      const res = await axios.get(`${API_BASE}/download-url?key=${file.key}`);
+      window.open(res.data.url, "_blank");
     } catch {
-      toast("Error fetching files", "#ef4444");
-    } finally {
-      setLoading(false);
+      toast("Unable to open file", "#ef4444");
     }
   };
 
-  const deleteFile = async (item) => {
-    if (!window.confirm(`Delete "${item.name || item.s3Key}" permanently?`))
-      return;
+  // DELETE FILE
+  const deleteFile = async (file) => {
+    if (!window.confirm(`Delete "${file.key}" permanently?`)) return;
+
     try {
-      await s3Client.send(
-        new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: item.s3Key })
-      );
-      await ddbDocClient.send(
-        new DeleteCommand({ TableName: DDB_TABLE, Key: { id: item.id } })
-      );
-      toast("File deleted successfully", "#10b981");
+      await axios.delete(`${API_BASE}/delete-file`, {
+        data: { key: file.key },
+      });
+
+      toast("File deleted successfully");
       fetchFiles();
-    } catch {
-      toast("Failed to delete file", "#ef4444");
+    } catch (err) {
+      toast("Delete failed", "#ef4444");
     }
   };
 
-  const openFile = async (item) => {
-    try {
-      const url = await getSignedUrl(
-        s3Client,
-        new GetObjectCommand({ Bucket: S3_BUCKET, Key: item.s3Key }),
-        { expiresIn: 900 }
-      );
-      window.open(url, "_blank");
-    } catch {
-      toast("Cannot open file. Check permissions.", "#ef4444");
-    }
-  };
-
-  const filtered = ddbItems.filter((f) =>
-    (f.name || f.s3Key || "")
-      .toLowerCase()
-      .includes(searchQuery.trim().toLowerCase())
+  const filtered = files.filter((f) =>
+    (f.key || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -162,6 +116,7 @@ export default function Dashboard() {
       >
         ☁️
       </motion.div>
+
       <motion.div
         animate={{ y: [0, 25, 0] }}
         transition={{ duration: 8, repeat: Infinity }}
@@ -175,6 +130,7 @@ export default function Dashboard() {
       >
         📁
       </motion.div>
+
       <motion.div
         animate={{ y: [0, -15, 0] }}
         transition={{ duration: 10, repeat: Infinity }}
@@ -189,7 +145,7 @@ export default function Dashboard() {
         🔒
       </motion.div>
 
-      {/* Home + Back buttons */}
+      {/* Back & Home */}
       <div
         style={{
           position: "absolute",
@@ -213,6 +169,7 @@ export default function Dashboard() {
         >
           🔙 Back
         </motion.button>
+
         <motion.button
           whileHover={{ scale: 1.1 }}
           onClick={() => navigate("/")}
@@ -229,7 +186,7 @@ export default function Dashboard() {
         </motion.button>
       </div>
 
-      {/* Main Dashboard Card */}
+      {/* Main Card */}
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -260,6 +217,7 @@ export default function Dashboard() {
           ☁️ Cloud Dashboard
         </motion.h1>
 
+        {/* Search & Refresh */}
         <div
           style={{
             display: "flex",
@@ -282,6 +240,7 @@ export default function Dashboard() {
               fontSize: "1rem",
             }}
           />
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             onClick={fetchFiles}
@@ -309,20 +268,17 @@ export default function Dashboard() {
           }}
         >
           <table
-            style={{
-              width: "100%",
-              color: "#fff",
-              borderCollapse: "collapse",
-            }}
+            style={{ width: "100%", color: "#fff", borderCollapse: "collapse" }}
           >
             <thead>
               <tr style={{ borderBottom: "2px solid rgba(255,255,255,0.2)" }}>
                 <th style={{ padding: "12px", textAlign: "left" }}>Name</th>
                 <th style={{ padding: "12px", textAlign: "left" }}>Size</th>
-                <th style={{ padding: "12px", textAlign: "left" }}>Uploaded</th>
+                <th style={{ padding: "12px", textAlign: "left" }}>Last Modified</th>
                 <th style={{ padding: "12px", textAlign: "center" }}>Actions</th>
               </tr>
             </thead>
+
             <tbody>
               {loading ? (
                 <tr>
@@ -347,9 +303,10 @@ export default function Dashboard() {
                       borderBottom: "1px solid rgba(255,255,255,0.1)",
                     }}
                   >
-                    <td style={{ padding: "10px" }}>{file.name || file.s3Key}</td>
+                    <td style={{ padding: "10px" }}>{file.key}</td>
                     <td style={{ padding: "10px" }}>{file.size || "--"}</td>
-                    <td style={{ padding: "10px" }}>{file.uploadedAt || "--"}</td>
+                    <td style={{ padding: "10px" }}>{file.lastModified || "--"}</td>
+
                     <td style={{ padding: "10px", textAlign: "center" }}>
                       <button
                         onClick={() => openFile(file)}
@@ -365,6 +322,7 @@ export default function Dashboard() {
                       >
                         View
                       </button>
+
                       <button
                         onClick={() => openFile(file)}
                         style={{
@@ -379,6 +337,7 @@ export default function Dashboard() {
                       >
                         Download
                       </button>
+
                       <button
                         onClick={() => deleteFile(file)}
                         style={{
@@ -393,8 +352,9 @@ export default function Dashboard() {
                       >
                         Delete
                       </button>
+
                       <button
-                        onClick={() => setSelectedFile(file)} // 👈 open modal
+                        onClick={() => setSelectedFile(file)}
                         style={{
                           margin: "0 6px",
                           padding: "6px 10px",
@@ -418,10 +378,7 @@ export default function Dashboard() {
 
       {/* Permission Modal */}
       {selectedFile && (
-        <PermissionModal
-          file={selectedFile}
-          onClose={() => setSelectedFile(null)}
-        />
+        <PermissionModal file={selectedFile} onClose={() => setSelectedFile(null)} />
       )}
     </motion.div>
   );

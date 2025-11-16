@@ -1,36 +1,36 @@
+// src/pages/FileManagement.js
+
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import "./FileManagement.css";
 
-const defaultConfig = {
-  page_title: "File Management",
-  page_subtitle: "Manage your uploaded files",
-  back_button: "← Back",
-  home_button: "🏠 Home",
-  search_placeholder: "Search files...",
-  download_button: "Download",
-  delete_button: "Delete",
-  list_api: "/api/list-files",
-  download_api: "/api/download-file",
-  delete_api: "/api/delete-file",
-  primary_color: "#6366f1",
-  secondary_color: "#8b5cf6",
-  background_color: "#eef2ff",
-  surface_color: "#ffffff",
-  text_color: "#1e293b",
-  font_family: "Inter",
-};
+const API_BASE = "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
 
 export default function FileManagement() {
-  const [config] = useState(defaultConfig);
+  const navigate = useNavigate();
+
   const [files, setFiles] = useState([]);
   const [filteredFiles, setFilteredFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const navigate = useNavigate();
+  const [error, setError] = useState(null);
+
+  // Fetch files from backend
+  const fetchFiles = async () => {
+    setIsLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/files`);
+      setFiles(res.data.files || []);
+      setFilteredFiles(res.data.files || []);
+      setError(null);
+    } catch (err) {
+      setError("Failed to load files");
+    }
+    setIsLoading(false);
+  };
 
   useEffect(() => {
     fetchFiles();
@@ -39,101 +39,87 @@ export default function FileManagement() {
   useEffect(() => {
     setFilteredFiles(
       files.filter((file) =>
-        file.fileName.toLowerCase().includes(searchQuery.toLowerCase())
+        file.key?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     );
   }, [searchQuery, files]);
 
-  const fetchFiles = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(config.list_api);
-      if (!response.ok) throw new Error("Failed to fetch files");
-      const data = await response.json();
-      setFiles(data.files || []);
-      setFilteredFiles(data.files || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Download file
   const handleDownload = async (file) => {
     try {
-      const res = await fetch(
-        `${config.download_api}?filename=${encodeURIComponent(file.fileName)}`
-      );
-      const data = await res.json();
+      const res = await axios.get(`${API_BASE}/download-url?key=${file.key}`);
+      const url = res.data.url;
+
       const link = document.createElement("a");
-      link.href = data.downloadUrl;
-      link.download = file.fileName;
-      document.body.appendChild(link);
+      link.href = url;
+      link.download = file.key;
       link.click();
-      link.remove();
     } catch {
       alert("Download failed");
     }
   };
 
+  // Delete file
   const handleDelete = async (file) => {
     try {
-      const res = await fetch(
-        `${config.delete_api}?filename=${encodeURIComponent(file.fileName)}`,
-        { method: "DELETE" }
-      );
-      const data = await res.json();
-      if (data.success) {
-        setFiles((prev) => prev.filter((f) => f.fileName !== file.fileName));
-      }
+      await axios.delete(`${API_BASE}/delete-file`, {
+        data: { key: file.key },
+      });
+
+      setFiles((prev) => prev.filter((f) => f.key !== file.key));
       setConfirmDeleteId(null);
     } catch {
       alert("Delete failed");
     }
   };
 
-  const formatFileSize = (bytes) => {
-    if (!bytes) return "0 Bytes";
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return (bytes / Math.pow(1024, i)).toFixed(2) + " " + sizes[i];
-  };
-
-  const formatDate = (date) =>
-    date ? new Date(date).toLocaleString() : "Unknown";
-
-  const getFileIcon = (fileName) => {
-    const ext = fileName.split(".").pop().toLowerCase();
+  // Icons by file type
+  const getFileIcon = (name) => {
+    if (!name) return "📁";
+    const ext = name.split(".").pop().toLowerCase();
     const icons = {
       pdf: "📄",
       docx: "📝",
       xlsx: "📊",
-      pptx: "📽️",
+      pptx: "🎥",
       jpg: "🖼️",
+      jpeg: "🖼️",
       png: "🖼️",
       gif: "🖼️",
       zip: "📦",
-      mp4: "🎥",
+      mp4: "🎬",
       mp3: "🎵",
       txt: "📃",
     };
     return icons[ext] || "📁";
   };
 
-  // Loading Screen
+  const formatSize = (b) => {
+    if (!b) return "--";
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(b) / Math.log(1024));
+    return (b / Math.pow(1024, i)).toFixed(2) + " " + sizes[i];
+  };
+
+  const formatDate = (d) =>
+    d ? new Date(d).toLocaleString() : "Unknown";
+
+  // Loading screen
   if (isLoading)
     return (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-blue-100 text-gray-600"
+        className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-indigo-100 via-purple-100 to-blue-100"
       >
         <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-4 text-lg font-semibold">Loading files...</p>
+        <p className="mt-4 text-lg font-semibold text-gray-600">
+          Loading files...
+        </p>
       </motion.div>
     );
 
-  // Error Screen
+  // Error screen
   if (error)
     return (
       <motion.div
@@ -147,7 +133,7 @@ export default function FileManagement() {
         <p className="mb-4">{error}</p>
         <button
           onClick={fetchFiles}
-          className="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600"
+          className="bg-indigo-500 text-white px-4 py-2 rounded-lg"
         >
           Try Again
         </button>
@@ -159,40 +145,40 @@ export default function FileManagement() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
-      className="relative min-h-screen p-6 bg-gradient-to-br from-indigo-100 via-purple-100 to-blue-100 overflow-hidden"
-      style={{ fontFamily: config.font_family }}
+      className="relative min-h-screen p-6 bg-gradient-to-br from-indigo-100 via-purple-100 to-blue-100"
+      style={{ fontFamily: "Inter" }}
     >
-      {/* Floating Icons */}
+      {/* Floating icons */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 6, repeat: Infinity }}
         className="absolute top-16 left-10 text-[80px] opacity-10"
       >
         ☁️
       </motion.div>
+
       <motion.div
-        animate={{ y: [0, 25, 0] }}
-        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+        animate={{ y: [0, 20, 0] }}
+        transition={{ duration: 7, repeat: Infinity }}
         className="absolute bottom-10 right-10 text-[100px] opacity-10"
       >
         📁
       </motion.div>
 
-      {/* 🏠 Back & Home Buttons */}
-      <div className="absolute top-5 left-5 flex gap-3 z-10">
+      {/* Back & Home */}
+      <div className="absolute top-5 left-5 flex gap-3 z-20">
         <motion.button
           whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
           onClick={() => navigate(-1)}
-          className="bg-white border-2 border-indigo-500 text-indigo-600 px-4 py-2 rounded-lg font-semibold shadow hover:bg-indigo-50"
+          className="bg-white border-2 border-indigo-500 text-indigo-600 px-4 py-2 rounded-lg font-semibold"
         >
           ← Back
         </motion.button>
+
         <motion.button
           whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
           onClick={() => navigate("/")}
-          className="bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white px-4 py-2 rounded-lg font-semibold shadow hover:opacity-90"
+          className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-2 rounded-lg font-semibold"
         >
           🏠 Home
         </motion.button>
@@ -200,29 +186,25 @@ export default function FileManagement() {
 
       {/* Header */}
       <motion.header
-        initial={{ y: -30, opacity: 0 }}
+        initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.7 }}
-        className="flex flex-wrap justify-between items-center mb-8 mt-16"
+        className="mt-16 mb-8"
       >
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            {config.page_title}
-          </h1>
-          <p className="text-gray-600">{config.page_subtitle}</p>
-        </div>
+        <h1 className="text-3xl font-bold text-gray-800">File Management</h1>
+        <p className="text-gray-600">
+          Manage your uploaded files easily
+        </p>
       </motion.header>
 
       {/* Search */}
       <motion.input
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         type="text"
-        placeholder={config.search_placeholder}
+        placeholder="Search files..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full p-3 mb-8 border rounded-lg shadow focus:ring-2 focus:ring-indigo-400 outline-none"
+        className="w-full p-3 mb-8 border rounded-lg shadow"
       />
 
       {/* Files Grid */}
@@ -230,17 +212,12 @@ export default function FileManagement() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="text-center py-20 bg-white rounded-lg shadow-md"
+          className="text-center py-20 bg-white rounded-xl shadow"
         >
           <div className="text-5xl mb-4">📭</div>
           <h2 className="text-xl font-semibold text-gray-800">
             No Files Found
           </h2>
-          <p className="text-gray-500">
-            {searchQuery
-              ? "Try a different search query."
-              : "Upload files to see them here."}
-          </p>
         </motion.div>
       ) : (
         <motion.div
@@ -260,32 +237,26 @@ export default function FileManagement() {
             <motion.div
               key={i}
               whileHover={{ scale: 1.04 }}
-              className="bg-white rounded-xl shadow p-5 hover:shadow-xl transition-all"
+              className="bg-white rounded-xl shadow p-5"
             >
               <div className="flex items-start gap-3 mb-3">
-                <div className="text-4xl">{getFileIcon(file.fileName)}</div>
+                <div className="text-4xl">{getFileIcon(file.key)}</div>
                 <div className="truncate">
-                  <h3 className="font-semibold text-gray-800 truncate">
-                    {file.fileName}
-                  </h3>
-                  <p className="text-gray-500 text-sm">
-                    {formatFileSize(file.fileSize)}
-                  </p>
+                  <h3 className="font-semibold text-gray-800 truncate">{file.key}</h3>
+                  <p className="text-gray-500 text-sm">{formatSize(file.size)}</p>
                 </div>
               </div>
+
               <div className="text-sm text-gray-500 mb-4">
-                Uploaded: {formatDate(file.uploadDate)}
+                Uploaded: {formatDate(file.lastModified)}
               </div>
 
-              {confirmDeleteId === file.fileName ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex flex-col gap-2"
-                >
+              {confirmDeleteId === file.key ? (
+                <div className="flex flex-col gap-2">
                   <p className="text-red-500 font-semibold text-sm text-center">
                     Confirm delete?
                   </p>
+
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleDelete(file)}
@@ -300,20 +271,21 @@ export default function FileManagement() {
                       No
                     </button>
                   </div>
-                </motion.div>
+                </div>
               ) : (
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleDownload(file)}
-                    className="flex-1 bg-indigo-500 text-white py-2 rounded-lg hover:bg-indigo-600"
+                    className="flex-1 bg-indigo-500 text-white py-2 rounded-lg"
                   >
-                    {config.download_button}
+                    Download
                   </button>
+
                   <button
-                    onClick={() => setConfirmDeleteId(file.fileName)}
-                    className="flex-1 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600"
+                    onClick={() => setConfirmDeleteId(file.key)}
+                    className="flex-1 bg-red-500 text-white py-2 rounded-lg"
                   >
-                    {config.delete_button}
+                    Delete
                   </button>
                 </div>
               )}
