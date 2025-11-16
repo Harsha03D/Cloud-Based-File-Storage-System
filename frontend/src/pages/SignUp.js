@@ -150,8 +150,8 @@ function SignUp() {
           return;
         }
 
-        alert("Signup successful! Please check your email to verify your account.");
-        navigate("/confirm",{state: {email:formData.email}});
+        alert("Signup successful!");
+        navigate("/login");
       }
     );
   };
