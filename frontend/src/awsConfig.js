@@ -1,8 +1,8 @@
 const awsConfig = {
   region: "eu-north-1",
-  userPoolId: "YOUR_USER_POOL_ID_HERE",
-  clientId: "YOUR_CLIENT_ID_HERE",
-  authDomain: "YOUR_COGNITO_DOMAIN_HERE"
+  userPoolId: "eu-north-1_URXU8H356",
+  clientId: "42r9hdkdbnbi51rihfobs731r9",
+  authDomain: "https://eu-north-1urxu8h356.auth.eu-north-1.amazoncognito.com"
 };
 
 export default awsConfig;
