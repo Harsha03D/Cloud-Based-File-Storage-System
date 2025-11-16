@@ -13,11 +13,12 @@ import Analytics from "./pages/Analytics";
 import Activities from "./pages/Activities";
 import Upload from "./pages/Upload";
 import About from "./pages/About";
-import ErrorPage from "./pages/Error"; 
+import ErrorPage from "./pages/Error";
 import ConfirmSignUp from "./pages/ConfirmSignUP";
-// ---------------------------------------------
+
+// -----------------------------------------------------
 // 🔐 Private Route Wrapper
-// ---------------------------------------------
+// -----------------------------------------------------
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("token");
 
@@ -33,14 +34,15 @@ export default function App() {
     <Router>
       <Routes>
 
-        {/* Public Routes */}
+        {/* 🌐 Public Routes */}
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/about" element={<About />} />
         <Route path="/confirm" element={<ConfirmSignUp />} />
 
-        {/* Protected Routes */}
+        {/* 🔐 Protected Routes */}
+
         <Route
           path="/dashboard"
           element={
@@ -68,8 +70,19 @@ export default function App() {
           }
         />
 
+        {/* OLD upload path (kept safe) */}
         <Route
           path="/files/upload"
+          element={
+            <PrivateRoute>
+              <Upload />
+            </PrivateRoute>
+          }
+        />
+
+        {/* NEW upload path (Dashboard button navigates here) */}
+        <Route
+          path="/upload"
           element={
             <PrivateRoute>
               <Upload />
@@ -104,7 +117,7 @@ export default function App() {
           }
         />
 
-        {/* ⛔ Error Route */}
+        {/* ⛔ 404 Page */}
         <Route path="*" element={<ErrorPage />} />
       </Routes>
     </Router>
