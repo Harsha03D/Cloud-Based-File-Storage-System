@@ -14,8 +14,7 @@ import Activities from "./pages/Activities";
 import Upload from "./pages/Upload";
 import About from "./pages/About";
 import ErrorPage from "./pages/Error"; 
-import ConfirmSignUp from "./ConfirmSignUp";
-
+import ConfirmSignUp from "./pages/ConfirmSignUP";
 // ---------------------------------------------
 // 🔐 Private Route Wrapper
 // ---------------------------------------------
