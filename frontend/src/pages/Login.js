@@ -77,7 +77,7 @@ function Login() {
       onSuccess: (session) => {
         const jwt = session.getIdToken().getJwtToken();
 
-        localStorage.setItem("token", jwt);
+        localStorage.setItem("token", "Bearer " + jwt);
         localStorage.setItem("email", email);
 
         navigate("/dashboard");
