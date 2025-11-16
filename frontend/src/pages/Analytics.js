@@ -8,6 +8,7 @@ const API_BASE = "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
 
 const Analytics = () => {
   const navigate = useNavigate();
+
   const [analyticsData, setAnalyticsData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,7 +26,10 @@ const Analytics = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(`${API_BASE}/analytics`, {
-        headers: { Authorization: token }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-user-id": localStorage.getItem("email"),
+        },
       });
 
       setAnalyticsData(res.data);
@@ -55,6 +59,7 @@ const Analytics = () => {
     if (trendChartInstance.current) trendChartInstance.current.destroy();
     if (storageChartInstance.current) storageChartInstance.current.destroy();
 
+    // Upload/Download Trend Chart
     const trendCtx = trendChartRef.current.getContext("2d");
     trendChartInstance.current = new Chart(trendCtx, {
       type: "line",
@@ -93,6 +98,7 @@ const Analytics = () => {
       },
     });
 
+    // Storage by File Type Pie Chart
     const storageCtx = storageChartRef.current.getContext("2d");
     storageChartInstance.current = new Chart(storageCtx, {
       type: "pie",
@@ -133,7 +139,10 @@ const Analytics = () => {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-red-600">
         <p className="mb-4">{error}</p>
-        <button className="bg-indigo-500 text-white px-5 py-2 rounded-lg" onClick={fetchAnalytics}>
+        <button
+          className="bg-indigo-500 text-white px-5 py-2 rounded-lg"
+          onClick={fetchAnalytics}
+        >
           Retry
         </button>
       </div>
@@ -165,7 +174,7 @@ const Analytics = () => {
       <h1 className="text-4xl font-bold mb-2 text-gray-800">Analytics Dashboard</h1>
       <p className="text-gray-600 mb-8">Monitor your cloud statistics</p>
 
-      {/* Cards */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-indigo-500 text-white p-6 rounded-xl shadow-lg">
           <p>Total Storage</p>

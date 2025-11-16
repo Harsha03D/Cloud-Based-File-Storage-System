@@ -18,32 +18,39 @@ export default function FileManagement() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [error, setError] = useState(null);
 
-  // 🔐 Protect page → If token missing, go to login
+  // 🔐 Protect page: No token → redirect to login
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) navigate("/login");
+    const email = localStorage.getItem("email");
+    if (!token || !email) navigate("/login");
   }, [navigate]);
 
-  // Add auth header
+  // 🔐 Build auth headers
   const authHeaders = () => ({
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
+      "x-user-id": localStorage.getItem("email"),
     },
   });
 
-  // 📌 Fetch files
+  // 📌 Fetch files from backend
   const fetchFiles = async () => {
     setIsLoading(true);
+
     try {
       const res = await axios.get(`${API_BASE}/files`, authHeaders());
 
-      setFiles(res.data.files || []);
-      setFilteredFiles(res.data.files || []);
+      // backend returns array directly
+      const list = Array.isArray(res.data) ? res.data : res.data.files || [];
+
+      setFiles(list);
+      setFilteredFiles(list);
       setError(null);
     } catch (err) {
       console.error(err);
       setError("Failed to load files");
     }
+
     setIsLoading(false);
   };
 
@@ -51,11 +58,13 @@ export default function FileManagement() {
     fetchFiles();
   }, []);
 
-  // 📌 Filter search results
+  // 📌 Update filtered list when searching
   useEffect(() => {
     setFilteredFiles(
       files.filter((file) =>
-        file.key?.toLowerCase().includes(searchQuery.toLowerCase())
+        (file.fileName || file.key || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())
       )
     );
   }, [searchQuery, files]);
@@ -63,14 +72,16 @@ export default function FileManagement() {
   // 📥 Download file
   const handleDownload = async (file) => {
     try {
+      const key = encodeURIComponent(file.s3Key || file.key);
+
       const res = await axios.get(
-        `${API_BASE}/download-url?key=${file.key}`,
+        `${API_BASE}/download-url?key=${key}`,
         authHeaders()
       );
 
       const link = document.createElement("a");
       link.href = res.data.url;
-      link.download = file.key;
+      link.download = file.fileName || file.key;
       link.click();
     } catch (err) {
       alert("Download failed");
@@ -81,21 +92,24 @@ export default function FileManagement() {
   const handleDelete = async (file) => {
     try {
       await axios.delete(`${API_BASE}/delete-file`, {
-        data: { key: file.key },
+        data: { key: file.s3Key || file.key },
         ...authHeaders(),
       });
 
-      setFiles((prev) => prev.filter((f) => f.key !== file.key));
+      setFiles((prev) =>
+        prev.filter((f) => (f.s3Key || f.key) !== (file.s3Key || file.key))
+      );
       setConfirmDeleteId(null);
     } catch (err) {
       alert("Delete failed");
     }
   };
 
-  // Icon selection
+  // File icon picker
   const getFileIcon = (name) => {
     if (!name) return "📁";
     const ext = name.split(".").pop().toLowerCase();
+
     const icons = {
       pdf: "📄",
       docx: "📝",
@@ -110,6 +124,7 @@ export default function FileManagement() {
       mp3: "🎵",
       txt: "📃",
     };
+
     return icons[ext] || "📁";
   };
 
@@ -159,7 +174,7 @@ export default function FileManagement() {
       </motion.div>
     );
 
-  // MAIN UI
+  // MAIN UI (unchanged)
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -223,7 +238,7 @@ export default function FileManagement() {
         className="w-full p-3 mb-8 border rounded-lg shadow"
       />
 
-      {/* Files Grid */}
+      {/* File Grid */}
       {filteredFiles.length === 0 ? (
         <motion.div
           initial={{ opacity: 0 }}
@@ -256,11 +271,11 @@ export default function FileManagement() {
               className="bg-white rounded-xl shadow p-5"
             >
               <div className="flex items-start gap-3 mb-3">
-                <div className="text-4xl">{getFileIcon(file.key)}</div>
+                <div className="text-4xl">{getFileIcon(file.fileName || file.key)}</div>
 
                 <div className="truncate">
                   <h3 className="font-semibold text-gray-800 truncate">
-                    {file.key}
+                    {file.fileName || file.key}
                   </h3>
                   <p className="text-gray-500 text-sm">
                     {formatSize(file.size)}
@@ -269,10 +284,10 @@ export default function FileManagement() {
               </div>
 
               <div className="text-sm text-gray-500 mb-4">
-                Uploaded: {formatDate(file.lastModified)}
+                Uploaded: {formatDate(file.uploadedAt || file.lastModified)}
               </div>
 
-              {confirmDeleteId === file.key ? (
+              {confirmDeleteId === (file.s3Key || file.key) ? (
                 <div className="flex flex-col gap-2">
                   <p className="text-red-500 font-semibold text-sm text-center">
                     Confirm delete?
@@ -304,7 +319,9 @@ export default function FileManagement() {
                   </button>
 
                   <button
-                    onClick={() => setConfirmDeleteId(file.key)}
+                    onClick={() =>
+                      setConfirmDeleteId(file.s3Key || file.key)
+                    }
                     className="flex-1 bg-red-500 text-white py-2 rounded-lg"
                   >
                     Delete

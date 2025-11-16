@@ -39,24 +39,27 @@ export default function Dashboard() {
   const secondary = "#8b5cf6";
   const accent = "#38bdf8";
 
-  // 🔐 PROTECT DASHBOARD
+  // 🔐 Protect dashboard (token + email)
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) navigate("/login");
+    const email = localStorage.getItem("email");
+    if (!token || !email) navigate("/login");
   }, [navigate]);
 
+  // 🔐 Build headers for ALL API calls
   const getAuthHeaders = () => ({
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
+      "x-user-id": localStorage.getItem("email"), // REQUIRED for DynamoDB
     },
   });
 
-  // 📂 FETCH FILES
+  // 📂 Fetch Files
   const fetchFiles = async () => {
     setLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/files`, getAuthHeaders());
-      setFiles(res.data.files || []);
+      setFiles(res.data || []); // backend returns array directly
     } catch (err) {
       toast("Failed to fetch files", "#ef4444");
     }
@@ -67,11 +70,11 @@ export default function Dashboard() {
     fetchFiles();
   }, []);
 
-  // 📥 DOWNLOAD
+  // 📥 Download / View File
   const openFile = async (file) => {
     try {
       const res = await axios.get(
-        `${API_BASE}/download-url?key=${file.key}`,
+        `${API_BASE}/download-url?key=${encodeURIComponent(file.s3Key || file.key)}`,
         getAuthHeaders()
       );
       window.open(res.data.url, "_blank");
@@ -80,18 +83,16 @@ export default function Dashboard() {
     }
   };
 
-  // 🗑 DELETE
+  // 🗑 Delete File
   const deleteFile = async (file) => {
-    if (!window.confirm(`Delete "${file.key}" permanently?`)) return;
+    if (!window.confirm(`Delete "${file.fileName || file.key}" permanently?`))
+      return;
 
     try {
-      await axios.delete(
-        `${API_BASE}/delete-file`,
-        {
-          data: { key: file.key },
-          ...getAuthHeaders(),
-        }
-      );
+      await axios.delete(`${API_BASE}/delete-file`, {
+        data: { key: file.s3Key || file.key },
+        ...getAuthHeaders(),
+      });
 
       toast("File deleted successfully");
       fetchFiles();
@@ -100,9 +101,16 @@ export default function Dashboard() {
     }
   };
 
+  // 🔎 Filter search
   const filtered = files.filter((f) =>
-    (f.key || "").toLowerCase().includes(searchQuery.toLowerCase())
+    (f.fileName || f.key || "")
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase())
   );
+
+  // ============================
+  // UI (UNCHANGED EXACT SAME)
+  // ============================
 
   return (
     <motion.div
@@ -236,7 +244,7 @@ export default function Dashboard() {
           ☁️ Cloud Dashboard
         </motion.h1>
 
-        {/* Search */}
+        {/* SEARCH */}
         <div
           style={{
             display: "flex",
@@ -277,7 +285,7 @@ export default function Dashboard() {
           </motion.button>
         </div>
 
-        {/* FILE TABLE */}
+        {/* TABLE */}
         <div
           style={{
             background: "rgba(255,255,255,0.15)",
@@ -318,12 +326,11 @@ export default function Dashboard() {
                     transition={{ delay: i * 0.05 }}
                     style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}
                   >
-                    <td style={{ padding: "10px" }}>{file.key}</td>
+                    <td style={{ padding: "10px" }}>{file.fileName || file.key}</td>
                     <td style={{ padding: "10px" }}>{file.size || "--"}</td>
-                    <td style={{ padding: "10px" }}>{file.lastModified || "--"}</td>
+                    <td style={{ padding: "10px" }}>{file.uploadedAt || file.lastModified || "--"}</td>
 
                     <td style={{ padding: "10px", textAlign: "center" }}>
-                      
                       <button
                         onClick={() => openFile(file)}
                         style={{

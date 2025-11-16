@@ -1,7 +1,10 @@
 // src/pages/UserInfo.js
+
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+
+const API_BASE = "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
 
 const UserInfo = () => {
   const [profileData, setProfileData] = useState(null);
@@ -9,22 +12,32 @@ const UserInfo = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
+
   const navigate = useNavigate();
 
-  const PROFILE_API = "/api/user/profile";
-  const UPDATE_PROFILE_API = "/api/user/update-profile";
+  const PROFILE_API = `${API_BASE}/profile`;
+  const UPDATE_PROFILE_API = `${API_BASE}/update-profile`;
 
-  // 🎨 Theme colors
-  const primaryColor = "#6366f1"; // Indigo
-  const secondaryColor = "#8b5cf6"; // Purple
-  const accentColor = "#38bdf8"; // Sky Blue
-  const textColor = "#1e293b";
+  // Protect page – redirect if not logged in
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) navigate("/login");
+  }, [navigate]);
 
-  // 📡 Fetch user profile
+  // Fetch user profile
   const fetchProfile = async () => {
     try {
-      const res = await fetch(PROFILE_API);
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(PROFILE_API, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-user-id": localStorage.getItem("email"),
+        },
+      });
+
       if (!res.ok) throw new Error("Failed to fetch profile");
+
       const data = await res.json();
       setProfileData(data);
       setFullName(data.fullName || "");
@@ -45,12 +58,21 @@ const UserInfo = () => {
 
     try {
       setIsSaving(true);
+
+      const token = localStorage.getItem("token");
+
       const res = await fetch(UPDATE_PROFILE_API, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          "x-user-id": localStorage.getItem("email"),
+        },
         body: JSON.stringify({ fullName }),
       });
+
       if (!res.ok) throw new Error("Failed to update profile");
+
       await res.json();
       navigate("/dashboard");
     } catch (err) {
@@ -63,18 +85,26 @@ const UserInfo = () => {
   const handleHome = () => navigate("/");
   const handleBack = () => navigate(-1);
 
+  // UI: Loading
   if (isLoading)
     return (
       <div className="flex justify-center items-center min-h-screen text-white text-xl font-semibold">
         Loading...
       </div>
     );
+
+  // UI: Error
   if (error)
     return (
       <div className="flex justify-center items-center min-h-screen text-red-200 text-xl">
         {error}
       </div>
     );
+
+  // Colors
+  const primaryColor = "#6366f1";
+  const secondaryColor = "#8b5cf6";
+  const accentColor = "#38bdf8";
 
   return (
     <div
@@ -90,10 +120,10 @@ const UserInfo = () => {
         padding: "20px",
       }}
     >
-      {/* Floating icons for motion */}
+      {/* Floating icon 1 */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 6, repeat: Infinity }}
         style={{
           position: "absolute",
           top: "15%",
@@ -105,9 +135,10 @@ const UserInfo = () => {
         ☁️
       </motion.div>
 
+      {/* Floating icon 2 */}
       <motion.div
         animate={{ y: [0, 20, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 8, repeat: Infinity }}
         style={{
           position: "absolute",
           bottom: "10%",
@@ -119,9 +150,10 @@ const UserInfo = () => {
         📁
       </motion.div>
 
+      {/* Floating icon 3 */}
       <motion.div
         animate={{ y: [0, -15, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 10, repeat: Infinity }}
         style={{
           position: "absolute",
           top: "70%",
@@ -133,7 +165,7 @@ const UserInfo = () => {
         🔒
       </motion.div>
 
-      {/* 🏠 Home & Back buttons */}
+      {/* Back + Home */}
       <div
         style={{
           position: "absolute",
@@ -146,14 +178,12 @@ const UserInfo = () => {
       >
         <motion.button
           whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
           onClick={handleBack}
           style={{
-            background: "#ffffff",
+            background: "#fff",
             border: `2px solid ${primaryColor}`,
             borderRadius: "8px",
             padding: "8px 16px",
-            cursor: "pointer",
             color: primaryColor,
             fontWeight: 600,
           }}
@@ -163,15 +193,13 @@ const UserInfo = () => {
 
         <motion.button
           whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
           onClick={handleHome}
           style={{
             background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
             border: "none",
             borderRadius: "8px",
             padding: "8px 16px",
-            cursor: "pointer",
-            color: "white",
+            color: "#fff",
             fontWeight: 600,
           }}
         >
@@ -179,11 +207,11 @@ const UserInfo = () => {
         </motion.button>
       </div>
 
-      {/* Profile Card (Centered) */}
+      {/* Profile */}
       <motion.div
         initial={{ y: 60, opacity: 0, scale: 0.9 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+        transition={{ duration: 0.8 }}
         whileHover={{
           scale: 1.02,
           boxShadow: `0 0 40px ${accentColor}40`,
@@ -195,16 +223,15 @@ const UserInfo = () => {
           padding: "50px",
           width: "100%",
           maxWidth: "500px",
-          color: "#fff",
           textAlign: "center",
-          boxShadow: `0 10px 50px rgba(0,0,0,0.2)`,
+          color: "#fff",
           border: "2px solid rgba(255,255,255,0.3)",
         }}
       >
-        {/* Profile Avatar */}
+        {/* Avatar */}
         <motion.div
           animate={{ rotate: [0, 5, -5, 0] }}
-          transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+          transition={{ repeat: Infinity, duration: 6 }}
           style={{
             width: "90px",
             height: "90px",
@@ -212,23 +239,25 @@ const UserInfo = () => {
             borderRadius: "50%",
             background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
             display: "flex",
-            alignItems: "center",
             justifyContent: "center",
+            alignItems: "center",
             fontSize: "36px",
             fontWeight: "700",
-            color: "white",
-            boxShadow: `0 0 30px ${accentColor}40`,
+            color: "#fff",
           }}
         >
           {profileData?.fullName?.charAt(0).toUpperCase() || "👤"}
         </motion.div>
 
-        <h2 style={{ fontSize: "1.8rem", fontWeight: 700, marginBottom: "6px" }}>
+        {/* Name + Email */}
+        <h2 style={{ fontSize: "1.8rem", fontWeight: 700 }}>
           {profileData?.fullName || "User"}
         </h2>
+
         <p style={{ color: "#e5e7eb", marginBottom: "12px" }}>
           {profileData?.email}
         </p>
+
         <span
           style={{
             display: "inline-block",
@@ -242,7 +271,7 @@ const UserInfo = () => {
           {profileData?.role || "User"}
         </span>
 
-        {/* Edit Form */}
+        {/* Edit form */}
         <form onSubmit={handleSaveProfile}>
           <div style={{ marginBottom: "16px", textAlign: "left" }}>
             <label style={{ fontWeight: 600 }}>Full Name</label>
@@ -289,13 +318,11 @@ const UserInfo = () => {
               scale: 1.05,
               boxShadow: `0 0 30px ${accentColor}80`,
             }}
-            whileTap={{ scale: 0.95 }}
             type="submit"
             disabled={isSaving}
             style={{
               width: "100%",
               padding: "14px",
-              border: "none",
               borderRadius: "12px",
               fontWeight: "700",
               color: "white",

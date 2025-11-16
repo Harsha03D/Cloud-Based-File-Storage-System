@@ -1,5 +1,6 @@
 // src/pages/Landing.js
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
@@ -27,16 +28,16 @@ function Landing() {
   const handleSignup = () => navigate("/signup");
 
   const {
+    hero_tagline,
+    hero_description,
+    cta_login,
+    cta_signup,
     primary_color,
     secondary_color,
     background_color,
     surface_color,
     text_color,
     font_size,
-    hero_tagline,
-    hero_description,
-    cta_login,
-    cta_signup,
   } = config;
 
   return (
@@ -75,12 +76,13 @@ function Landing() {
           >
             ☁️
           </motion.div>
-          <h1 style={{ fontSize: "3.2rem", fontWeight: 800 }}>
-            CloudSafe
-            </h1>
-            <h2 style={{ fontSize: "2rem", fontWeight: 700, opacity: 0.9 }}>
-              {hero_tagline}
-              </h2>
+
+          <h1 style={{ fontSize: "3.2rem", fontWeight: 800 }}>CloudSafe</h1>
+
+          <h2 style={{ fontSize: "2rem", fontWeight: 700, opacity: 0.9 }}>
+            {hero_tagline}
+          </h2>
+
           <p
             style={{
               fontSize: "1.25rem",
@@ -99,7 +101,7 @@ function Landing() {
       {/* 💎 Why CloudSafe */}
       <section
         style={{
-          backgroundColor: "#f9fafb",
+          background: "#f9fafb",
           padding: "100px 24px",
           textAlign: "center",
         }}
@@ -157,7 +159,6 @@ function Landing() {
                 boxShadow: "0 8px 25px rgba(0,0,0,0.08)",
                 padding: "40px 30px",
                 width: "300px",
-                textAlign: "center",
               }}
             >
               <motion.div
@@ -171,6 +172,7 @@ function Landing() {
               >
                 {feature.icon}
               </motion.div>
+
               <h3 style={{ fontSize: "1.4rem", fontWeight: 700 }}>
                 {feature.title}
               </h3>
@@ -214,9 +216,21 @@ function Landing() {
           }}
         >
           {[
-            { icon: "📤", title: "Upload Files", desc: "Upload any file securely with one click." },
-            { icon: "🗂️", title: "Organize Easily", desc: "Manage folders, rename files, and keep things structured." },
-            { icon: "🔗", title: "Share Instantly", desc: "Generate instant, secure sharing links with permissions." },
+            {
+              icon: "📤",
+              title: "Upload Files",
+              desc: "Upload any file securely with one click.",
+            },
+            {
+              icon: "🗂️",
+              title: "Organize Easily",
+              desc: "Manage folders, rename files, and keep things structured.",
+            },
+            {
+              icon: "🔗",
+              title: "Share Instantly",
+              desc: "Generate instant, secure sharing links with permissions.",
+            },
           ].map((step, i) => (
             <motion.div
               key={i}
@@ -230,8 +244,8 @@ function Landing() {
                 borderRadius: "16px",
                 padding: "40px 30px",
                 width: "280px",
-                boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
                 backdropFilter: "blur(8px)",
+                boxShadow: "0 10px 25px rgba(0,0,0,0.15)",
               }}
             >
               <motion.div
@@ -241,19 +255,21 @@ function Landing() {
               >
                 {step.icon}
               </motion.div>
+
               <h3 style={{ fontSize: "1.3rem", fontWeight: 700 }}>
                 {step.title}
               </h3>
+
               <p style={{ opacity: 0.9, marginTop: "8px" }}>{step.desc}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* 🌌 Vision Section */}
+      {/* 🌌 Vision */}
       <section
         style={{
-          backgroundColor: "#f9fafb",
+          background: "#f9fafb",
           padding: "100px 24px",
           textAlign: "center",
         }}
@@ -271,6 +287,7 @@ function Landing() {
         >
           Our Vision
         </motion.h2>
+
         <motion.p
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -289,7 +306,7 @@ function Landing() {
         </motion.p>
       </section>
 
-      {/* 🧭 Final CTA Section (Signup + Login) */}
+      {/* CTA */}
       <section
         style={{
           background: `linear-gradient(135deg, ${primary_color}, ${secondary_color})`,
@@ -310,6 +327,7 @@ function Landing() {
         >
           Ready to Get Started?
         </motion.h2>
+
         <p
           style={{
             fontSize: "1.2rem",
@@ -337,11 +355,10 @@ function Landing() {
               scale: 1.08,
               boxShadow: "0 10px 30px rgba(255,255,255,0.3)",
             }}
-            whileTap={{ scale: 0.95 }}
             onClick={handleSignup}
             style={{
               padding: "16px 40px",
-              backgroundColor: surface_color,
+              background: surface_color,
               color: primary_color,
               border: "none",
               borderRadius: "12px",
@@ -358,7 +375,6 @@ function Landing() {
               scale: 1.08,
               boxShadow: "0 0 20px rgba(255,255,255,0.3)",
             }}
-            whileTap={{ scale: 0.95 }}
             onClick={handleLogin}
             style={{
               padding: "16px 40px",
@@ -379,7 +395,7 @@ function Landing() {
       {/* Footer */}
       <footer
         style={{
-          backgroundColor: surface_color,
+          background: surface_color,
           padding: "24px",
           borderTop: `1px solid ${text_color}10`,
           textAlign: "center",

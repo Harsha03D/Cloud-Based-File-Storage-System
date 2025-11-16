@@ -3,10 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 
-const API_BASE =
-  "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
+import {
+  CognitoUserPool,
+  CognitoUser,
+  AuthenticationDetails
+} from "amazon-cognito-identity-js";
+
+import awsConfig from "../awsConfig";
 
 const defaultConfig = {
   welcome_title: "Welcome back to CloudSafe",
@@ -42,37 +46,49 @@ function Login() {
     font_family,
   } = config;
 
-  // Apply gradient background
+  // background gradient
   useEffect(() => {
     document.body.style.background = `linear-gradient(135deg, ${primary_color}, ${secondary_color}, #7dd3fc)`;
     document.body.style.fontFamily = `${font_family}, sans-serif`;
   }, []);
 
-  // 1️⃣ LOGIN FUNCTION — connects to your Cognito login Lambda
-  const handleSubmit = async (e) => {
+  // ⭐ Cognito Login Handler (FINAL Version)
+  const handleSubmit = (e) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage("");
 
-    try {
-      const res = await axios.post(`${API_BASE}/login`, {
-        email,
-        password,
-      });
+    const pool = new CognitoUserPool({
+      UserPoolId: awsConfig.userPoolId,
+      ClientId: awsConfig.clientId,
+    });
 
-      // Store Cognito JWT token
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("email", email);
+    const user = new CognitoUser({
+      Username: email,
+      Pool: pool,
+    });
 
-      // Navigate to dashboard
-      navigate("/dashboard");
-    } catch (err) {
-      setErrorMessage(
-        err.response?.data?.message || "Invalid email or password"
-      );
-    }
+    const authDetails = new AuthenticationDetails({
+      Username: email,
+      Password: password,
+    });
 
-    setIsLoading(false);
+    user.authenticateUser(authDetails, {
+      onSuccess: (session) => {
+        const jwt = session.getIdToken().getJwtToken();
+
+        localStorage.setItem("token", jwt);
+        localStorage.setItem("email", email);
+
+        navigate("/dashboard");
+        setIsLoading(false);
+      },
+
+      onFailure: (err) => {
+        setErrorMessage(err.message || "Invalid login credentials");
+        setIsLoading(false);
+      },
+    });
   };
 
   const handleSignup = () => navigate("/signup");
@@ -94,7 +110,7 @@ function Login() {
         overflow: "hidden",
       }}
     >
-      {/* Floating icons */}
+      {/* Floating Background Icons */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
         transition={{ duration: 6, repeat: Infinity }}
@@ -137,7 +153,7 @@ function Login() {
         🔒
       </motion.div>
 
-      {/* Home / Back */}
+      {/* Back + Home buttons */}
       <div
         style={{
           position: "absolute",
@@ -321,7 +337,7 @@ function Login() {
             </div>
           </div>
 
-          {/* Error message */}
+          {/* Error */}
           {errorMessage && (
             <p
               style={{

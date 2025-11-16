@@ -24,6 +24,7 @@ const defaultConfig = {
 function UploadPage() {
   const navigate = useNavigate();
   const [config] = useState(defaultConfig);
+
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -37,16 +38,18 @@ function UploadPage() {
     font_family,
   } = config;
 
-  // 1️⃣ Protect page: Redirect if no AWS Cognito login token
+  // 🔐 Protect page
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) navigate("/login");
+    const email = localStorage.getItem("email");
+    if (!token || !email) navigate("/login");
   }, [navigate]);
 
-  // Authorization header for all API calls
+  // Headers with Cognito JWT + email
   const authHeaders = () => ({
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
+      "x-user-id": localStorage.getItem("email"),
     },
   });
 
@@ -72,7 +75,7 @@ function UploadPage() {
   const removeFile = (id) =>
     setSelectedFiles((prev) => prev.filter((f) => f.id !== id));
 
-  // 2️⃣ Upload handler
+  // ⭐ Main upload handler
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
 
@@ -80,7 +83,7 @@ function UploadPage() {
 
     try {
       for (let f of selectedFiles) {
-        // 2.1 Request presigned upload URL WITH AUTH
+        // 1️⃣ Request pre-signed URL
         const res = await axios.post(
           `${API_BASE}/upload-url`,
           {
@@ -90,20 +93,22 @@ function UploadPage() {
           authHeaders()
         );
 
-        const { uploadUrl, fileKey } = res.data;
+        const uploadUrl = res.data.uploadUrl;
+        const key = res.data.key; // backend returns this
 
-        // 2.2 Upload file directly to S3
+        // 2️⃣ Upload file to S3
         await axios.put(uploadUrl, f.file, {
           headers: { "Content-Type": f.file.type },
         });
 
-        // 2.3 Tell backend "file uploaded" (store metadata)
+        // 3️⃣ Save metadata in DynamoDB
         await axios.post(
           `${API_BASE}/save-file`,
           {
-            key: fileKey,
+            key: key,
             size: f.file.size,
-            lastModified: new Date().toISOString(),
+            uploadedAt: new Date().toISOString(),
+            userEmail: localStorage.getItem("email"),
           },
           authHeaders()
         );
@@ -112,7 +117,6 @@ function UploadPage() {
       alert("Upload successful!");
       setSelectedFiles([]);
       navigate("/dashboard");
-
     } catch (err) {
       console.error(err);
       alert("Upload failed. Check logs.");
@@ -139,7 +143,7 @@ function UploadPage() {
         overflow: "hidden",
       }}
     >
-      {/* Floating icons */}
+      {/* Floating icon */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
         transition={{ duration: 6, repeat: Infinity }}
@@ -172,7 +176,6 @@ function UploadPage() {
             border: `2px solid ${primary_color}`,
             borderRadius: "8px",
             padding: "8px 16px",
-            cursor: "pointer",
             color: primary_color,
             fontWeight: 600,
           }}
@@ -188,7 +191,6 @@ function UploadPage() {
             border: "none",
             borderRadius: "8px",
             padding: "8px 16px",
-            cursor: "pointer",
             color: "white",
             fontWeight: 600,
           }}
@@ -208,13 +210,13 @@ function UploadPage() {
           color: text_color,
         }}
       >
-        <h1 style={{ fontSize: "2.5rem", fontWeight: "700" }}>
+        <h1 style={{ fontSize: "2.5rem", fontWeight: 700 }}>
           {config.page_title}
         </h1>
         <p style={{ opacity: 0.7 }}>{config.page_subtitle}</p>
       </motion.div>
 
-      {/* Drop Zone */}
+      {/* Drop Zone UI — unchanged */}
       <motion.div
         onDragOver={(e) => {
           e.preventDefault();
@@ -271,7 +273,7 @@ function UploadPage() {
         />
       </motion.div>
 
-      {/* Selected Files */}
+      {/* Selected Files List */}
       <AnimatePresence>
         {selectedFiles.length > 0 && (
           <motion.div

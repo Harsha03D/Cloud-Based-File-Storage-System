@@ -7,6 +7,7 @@ const API_BASE = "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
 
 const Activities = () => {
   const navigate = useNavigate();
+
   const [activities, setActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -24,7 +25,10 @@ const Activities = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(`${API_BASE}/activities`, {
-        headers: { Authorization: token }
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "x-user-id": localStorage.getItem("email")
+        }
       });
 
       setActivities(res.data.activities || []);
@@ -46,29 +50,34 @@ const Activities = () => {
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
   };
 
-  const formatDate = (d) =>
-    d ? new Date(d).toLocaleString() : "Unknown";
+  const formatDate = (d) => (d ? new Date(d).toLocaleString() : "Unknown");
 
   const filteredAndSorted = useMemo(() => {
     let filtered = [...activities];
 
     if (dateFrom)
-      filtered = filtered.filter(a => new Date(a.timestamp) >= new Date(dateFrom));
+      filtered = filtered.filter(
+        (a) => new Date(a.timestamp) >= new Date(dateFrom)
+      );
 
     if (dateTo) {
       const end = new Date(dateTo);
       end.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(a => new Date(a.timestamp) <= end);
+      filtered = filtered.filter((a) => new Date(a.timestamp) <= end);
     }
 
     if (actionFilter !== "all")
-      filtered = filtered.filter(a => a.action === actionFilter);
+      filtered = filtered.filter((a) => a.action === actionFilter);
 
     filtered.sort((a, b) => {
-      if (sortBy === "date-desc") return new Date(b.timestamp) - new Date(a.timestamp);
-      if (sortBy === "date-asc") return new Date(a.timestamp) - new Date(b.timestamp);
-      if (sortBy === "name-asc") return (a.fileName || "").localeCompare(b.fileName || "");
-      if (sortBy === "name-desc") return (b.fileName || "").localeCompare(a.fileName || "");
+      if (sortBy === "date-desc")
+        return new Date(b.timestamp) - new Date(a.timestamp);
+      if (sortBy === "date-asc")
+        return new Date(a.timestamp) - new Date(b.timestamp);
+      if (sortBy === "name-asc")
+        return (a.fileKey || "").localeCompare(b.fileKey || "");
+      if (sortBy === "name-desc")
+        return (b.fileKey || "").localeCompare(a.fileKey || "");
       return 0;
     });
 
@@ -77,9 +86,9 @@ const Activities = () => {
 
   const stats = {
     total: filteredAndSorted.length,
-    uploads: filteredAndSorted.filter(a => a.action === "upload").length,
-    downloads: filteredAndSorted.filter(a => a.action === "download").length,
-    deletes: filteredAndSorted.filter(a => a.action === "delete").length,
+    uploads: filteredAndSorted.filter((a) => a.action === "upload").length,
+    downloads: filteredAndSorted.filter((a) => a.action === "download").length,
+    deletes: filteredAndSorted.filter((a) => a.action === "delete").length
   };
 
   if (isLoading)
@@ -117,10 +126,17 @@ const Activities = () => {
 
       {/* Header + Buttons */}
       <div className="absolute top-5 left-5 flex gap-3">
-        <button onClick={() => navigate(-1)} className="bg-white px-4 py-2 border border-indigo-500 rounded-lg">
+        <button
+          onClick={() => navigate(-1)}
+          className="bg-white px-4 py-2 border border-indigo-500 rounded-lg"
+        >
           ← Back
         </button>
-        <button onClick={() => navigate("/")} className="bg-indigo-600 text-white px-4 py-2 rounded-lg">
+
+        <button
+          onClick={() => navigate("/")}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
+        >
           🏠 Home
         </button>
       </div>
@@ -132,7 +148,9 @@ const Activities = () => {
       <div className="grid grid-cols-3 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-4 rounded-lg shadow">Total: {stats.total}</div>
         <div className="bg-white p-4 rounded-lg shadow">Uploads: {stats.uploads}</div>
-        <div className="bg-white p-4 rounded-lg shadow">Downloads: {stats.downloads}</div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          Downloads: {stats.downloads}
+        </div>
         <div className="bg-white p-4 rounded-lg shadow">Deletes: {stats.deletes}</div>
       </div>
 
@@ -151,7 +169,7 @@ const Activities = () => {
             {filteredAndSorted.length > 0 ? (
               filteredAndSorted.map((a, i) => (
                 <tr key={i} className="border-t hover:bg-gray-50">
-                  <td className="p-3">{a.fileName}</td>
+                  <td className="p-3">{a.fileKey}</td>
                   <td className="p-3 capitalize">{a.action}</td>
                   <td className="p-3">{formatDate(a.timestamp)}</td>
                   <td className="p-3">{formatFileSize(a.size)}</td>

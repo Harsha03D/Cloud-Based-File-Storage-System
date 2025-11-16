@@ -3,10 +3,13 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import {
+  CognitoUserPool
+} from "amazon-cognito-identity-js";
 
-const API_BASE =
-  "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
+import awsConfig from "../awsConfig";
+
+const API_BASE = "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
 
 const defaultConfig = {
   page_title: "Create Your Account",
@@ -53,13 +56,11 @@ function SignUp() {
     font_family,
   } = config;
 
-  // background
   useEffect(() => {
     document.body.style.background = `linear-gradient(135deg, ${primary_color}, ${secondary_color}, #7dd3fc)`;
     document.body.style.fontFamily = `${font_family}, sans-serif`;
   }, []);
 
-  // Password strength
   const calculatePasswordStrength = (password) => {
     let strength = 0;
     if (password.length >= 8) strength += 25;
@@ -83,7 +84,6 @@ function SignUp() {
     return "Strong";
   };
 
-  // Input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((p) => ({ ...p, [name]: value }));
@@ -93,7 +93,6 @@ function SignUp() {
     setSignupError("");
   };
 
-  // validation
   const validateForm = () => {
     const newErrors = {};
     if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
@@ -114,33 +113,47 @@ function SignUp() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ⭐ Create Cognito User
-  const handleSubmit = async (e) => {
+  // ⭐ Cognito SignUp Function (Final)
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
     setSignupError("");
 
-    try {
-      const res = await axios.post(`${API_BASE}/signup`, {
-        name: formData.fullName,
-        email: formData.email,
-        password: formData.password,
-      });
+    const pool = new CognitoUserPool({
+      UserPoolId: awsConfig.userPoolId,
+      ClientId: awsConfig.clientId,
+    });
 
-      alert("Account created successfully!");
-      navigate("/login");
+    const attributeList = [
+      {
+        Name: "name",
+        Value: formData.fullName,
+      },
+      {
+        Name: "email",
+        Value: formData.email,
+      },
+    ];
 
-    } catch (err) {
-      setSignupError(
-        err.response?.data?.message || "Signup failed. Try again."
-      );
-    }
+    pool.signUp(
+      formData.email,
+      formData.password,
+      attributeList,
+      null,
+      (err, result) => {
+        setIsLoading(false);
 
-    setIsLoading(false);
+        if (err) {
+          setSignupError(err.message || "Signup failed. Try again.");
+          return;
+        }
+
+        alert("Signup successful! Please check your email to verify your account.");
+        navigate("/login");
+      }
+    );
   };
 
   const handleBack = () => navigate(-1);
@@ -161,7 +174,6 @@ function SignUp() {
         overflow: "hidden",
       }}
     >
-      {/* floating icons */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
         transition={{ duration: 6, repeat: Infinity }}
@@ -204,7 +216,6 @@ function SignUp() {
         🔒
       </motion.div>
 
-      {/* Home + Back buttons */}
       <div
         style={{
           position: "absolute",
@@ -245,7 +256,6 @@ function SignUp() {
         </motion.button>
       </div>
 
-      {/* Signup Card */}
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -260,7 +270,6 @@ function SignUp() {
           zIndex: 2,
         }}
       >
-        {/* Logo */}
         <motion.div
           animate={{ rotate: [0, 5, -5, 0] }}
           transition={{ repeat: Infinity, duration: 6 }}
@@ -304,7 +313,6 @@ function SignUp() {
           {config.page_subtitle}
         </p>
 
-        {/* Signup error */}
         {signupError && (
           <p
             style={{
@@ -318,10 +326,8 @@ function SignUp() {
           </p>
         )}
 
-        {/* FORM */}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           
-          {/* Full Name */}
           <div>
             <label style={{ fontWeight: 600, color: text_color }}>
               {config.name_label}
@@ -342,9 +348,10 @@ function SignUp() {
             {errors.fullName && <p style={{ color: "#ef4444" }}>{errors.fullName}</p>}
           </div>
 
-          {/* Email */}
           <div>
-            <label style={{ fontWeight: 600, color: text_color }}>{config.email_label}</label>
+            <label style={{ fontWeight: 600, color: text_color }}>
+              {config.email_label}
+            </label>
             <input
               type="email"
               name="email"
@@ -362,7 +369,6 @@ function SignUp() {
             {errors.email && <p style={{ color: "#ef4444" }}>{errors.email}</p>}
           </div>
 
-          {/* Password */}
           <div>
             <label style={{ fontWeight: 600, color: text_color }}>
               {config.password_label}
@@ -402,7 +408,6 @@ function SignUp() {
               </button>
             </div>
 
-            {/* Password strength bar */}
             {formData.password && (
               <div style={{ marginTop: "8px" }}>
                 <div
@@ -431,7 +436,6 @@ function SignUp() {
             {errors.password && <p style={{ color: "#ef4444" }}>{errors.password}</p>}
           </div>
 
-          {/* Confirm Password */}
           <div>
             <label style={{ fontWeight: 600, color: text_color }}>
               {config.confirm_password_label}
@@ -476,7 +480,6 @@ function SignUp() {
             )}
           </div>
 
-          {/* Signup Button */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             type="submit"
