@@ -1,8 +1,8 @@
 const awsConfig = {
   region: "eu-north-1",
-  userPoolId: "eu-north-1_URXU8H356",
-  clientId: "42r9hdkdbnbi51rihfobs731r9",
-  authDomain: "process.env.REACT_APP_COGNITO_DOMAIN",
+  userPoolId: "YOUR_USER_POOL_ID_HERE",
+  clientId: "YOUR_CLIENT_ID_HERE",
+  authDomain: "YOUR_COGNITO_DOMAIN_HERE"
 };
 
 export default awsConfig;
