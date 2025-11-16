@@ -8,7 +8,7 @@ import axios from "axios";
 
 const API_BASE = "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
 
-// Toast
+// Toast helper
 function toast(msg, color = "#10b981") {
   const t = document.createElement("div");
   t.style.cssText = `
@@ -39,27 +39,25 @@ export default function Dashboard() {
   const secondary = "#8b5cf6";
   const accent = "#38bdf8";
 
-  // 🔐 Protect dashboard (token + email)
+  // protect route
   useEffect(() => {
     const token = localStorage.getItem("token");
     const email = localStorage.getItem("email");
     if (!token || !email) navigate("/login");
   }, [navigate]);
 
-  // 🔐 Build headers for ALL API calls
   const getAuthHeaders = () => ({
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,
-      "x-user-id": localStorage.getItem("email"), // REQUIRED for DynamoDB
+      "x-user-id": localStorage.getItem("email"),
     },
   });
 
-  // 📂 Fetch Files
   const fetchFiles = async () => {
     setLoading(true);
     try {
       const res = await axios.get(`${API_BASE}/files`, getAuthHeaders());
-      setFiles(res.data || []); // backend returns array directly
+      setFiles(res.data || []);
     } catch (err) {
       toast("Failed to fetch files", "#ef4444");
     }
@@ -70,7 +68,6 @@ export default function Dashboard() {
     fetchFiles();
   }, []);
 
-  // 📥 Download / View File
   const openFile = async (file) => {
     try {
       const res = await axios.get(
@@ -83,17 +80,13 @@ export default function Dashboard() {
     }
   };
 
-  // 🗑 Delete File
   const deleteFile = async (file) => {
-    if (!window.confirm(`Delete "${file.fileName || file.key}" permanently?`))
-      return;
-
+    if (!window.confirm(`Delete "${file.fileName || file.key}" permanently?`)) return;
     try {
       await axios.delete(`${API_BASE}/delete-file`, {
         data: { key: file.s3Key || file.key },
         ...getAuthHeaders(),
       });
-
       toast("File deleted successfully");
       fetchFiles();
     } catch (err) {
@@ -101,16 +94,9 @@ export default function Dashboard() {
     }
   };
 
-  // 🔎 Filter search
   const filtered = files.filter((f) =>
-    (f.fileName || f.key || "")
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
+    (f.fileName || f.key || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  // ============================
-  // UI (UNCHANGED EXACT SAME)
-  // ============================
 
   return (
     <motion.div
@@ -133,13 +119,7 @@ export default function Dashboard() {
       <motion.div
         animate={{ y: [0, -20, 0] }}
         transition={{ duration: 6, repeat: Infinity }}
-        style={{
-          position: "absolute",
-          top: "10%",
-          left: "5%",
-          fontSize: "80px",
-          opacity: 0.1,
-        }}
+        style={{ position: "absolute", top: "10%", left: "5%", fontSize: "80px", opacity: 0.1 }}
       >
         ☁️
       </motion.div>
@@ -147,13 +127,7 @@ export default function Dashboard() {
       <motion.div
         animate={{ y: [0, 25, 0] }}
         transition={{ duration: 8, repeat: Infinity }}
-        style={{
-          position: "absolute",
-          bottom: "15%",
-          right: "8%",
-          fontSize: "100px",
-          opacity: 0.1,
-        }}
+        style={{ position: "absolute", bottom: "15%", right: "8%", fontSize: "100px", opacity: 0.1 }}
       >
         📁
       </motion.div>
@@ -161,27 +135,13 @@ export default function Dashboard() {
       <motion.div
         animate={{ y: [0, -15, 0] }}
         transition={{ duration: 10, repeat: Infinity }}
-        style={{
-          position: "absolute",
-          top: "70%",
-          left: "10%",
-          fontSize: "60px",
-          opacity: 0.1,
-        }}
+        style={{ position: "absolute", top: "70%", left: "10%", fontSize: "60px", opacity: 0.1 }}
       >
         🔒
       </motion.div>
 
       {/* NAV BUTTONS */}
-      <div
-        style={{
-          position: "absolute",
-          top: "20px",
-          left: "20px",
-          display: "flex",
-          gap: "10px",
-        }}
-      >
+      <div style={{ position: "absolute", top: "20px", left: "20px", display: "flex", gap: "10px" }}>
         <motion.button
           whileHover={{ scale: 1.1 }}
           onClick={() => navigate(-1)}
@@ -234,38 +194,70 @@ export default function Dashboard() {
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
-          style={{
-            textAlign: "center",
-            fontSize: "2.2rem",
-            fontWeight: 800,
-            marginBottom: "16px",
-          }}
+          style={{ textAlign: "center", fontSize: "2.2rem", fontWeight: 800, marginBottom: "16px" }}
         >
           ☁️ Cloud Dashboard
         </motion.h1>
 
+        {/* ACTION BUTTONS */}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginBottom: "20px" }}>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            onClick={() => navigate("/analytics")}
+            style={{
+              background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+              border: "none",
+              color: "white",
+              borderRadius: "10px",
+              padding: "8px 16px",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            📊 Analytics
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            onClick={() => navigate("/activities")}
+            style={{
+              background: `linear-gradient(135deg, ${secondary}, ${accent})`,
+              border: "none",
+              color: "white",
+              borderRadius: "10px",
+              padding: "8px 16px",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            🕒 Activities
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            onClick={() => navigate("/upload")}
+            style={{
+              background: `linear-gradient(135deg, ${primary}, ${secondary})`,
+              border: "none",
+              color: "white",
+              borderRadius: "10px",
+              padding: "8px 18px",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            📤 Upload
+          </motion.button>
+        </div>
+
         {/* SEARCH */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            gap: "10px",
-            marginBottom: "24px",
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "24px" }}>
           <input
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search files..."
-            style={{
-              width: "300px",
-              padding: "10px 14px",
-              borderRadius: "10px",
-              border: "none",
-              outline: "none",
-              fontSize: "1rem",
-            }}
+            style={{ width: "300px", padding: "10px 14px", borderRadius: "10px", border: "none", outline: "none", fontSize: "1rem" }}
           />
 
           <motion.button
@@ -286,14 +278,7 @@ export default function Dashboard() {
         </div>
 
         {/* TABLE */}
-        <div
-          style={{
-            background: "rgba(255,255,255,0.15)",
-            borderRadius: "16px",
-            padding: "20px",
-            overflowX: "auto",
-          }}
-        >
+        <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: "16px", padding: "20px", overflowX: "auto" }}>
           <table style={{ width: "100%", color: "#fff", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "2px solid rgba(255,255,255,0.2)" }}>
@@ -333,60 +318,28 @@ export default function Dashboard() {
                     <td style={{ padding: "10px", textAlign: "center" }}>
                       <button
                         onClick={() => openFile(file)}
-                        style={{
-                          margin: "0 6px",
-                          padding: "6px 10px",
-                          borderRadius: "8px",
-                          border: "none",
-                          background: "#3b82f6",
-                          color: "white",
-                          cursor: "pointer",
-                        }}
+                        style={{ margin: "0 6px", padding: "6px 10px", borderRadius: "8px", border: "none", background: "#3b82f6", color: "white", cursor: "pointer" }}
                       >
                         View
                       </button>
 
                       <button
                         onClick={() => openFile(file)}
-                        style={{
-                          margin: "0 6px",
-                          padding: "6px 10px",
-                          borderRadius: "8px",
-                          border: "none",
-                          background: "#22c55e",
-                          color: "white",
-                          cursor: "pointer",
-                        }}
+                        style={{ margin: "0 6px", padding: "6px 10px", borderRadius: "8px", border: "none", background: "#22c55e", color: "white", cursor: "pointer" }}
                       >
                         Download
                       </button>
 
                       <button
                         onClick={() => deleteFile(file)}
-                        style={{
-                          margin: "0 6px",
-                          padding: "6px 10px",
-                          borderRadius: "8px",
-                          border: "none",
-                          background: "#ef4444",
-                          color: "white",
-                          cursor: "pointer",
-                        }}
+                        style={{ margin: "0 6px", padding: "6px 10px", borderRadius: "8px", border: "none", background: "#ef4444", color: "white", cursor: "pointer" }}
                       >
                         Delete
                       </button>
 
                       <button
                         onClick={() => setSelectedFile(file)}
-                        style={{
-                          margin: "0 6px",
-                          padding: "6px 10px",
-                          borderRadius: "8px",
-                          border: "none",
-                          background: "#8b5cf6",
-                          color: "white",
-                          cursor: "pointer",
-                        }}
+                        style={{ margin: "0 6px", padding: "6px 10px", borderRadius: "8px", border: "none", background: "#8b5cf6", color: "white", cursor: "pointer" }}
                       >
                         🔐 Permissions
                       </button>
@@ -400,12 +353,7 @@ export default function Dashboard() {
       </motion.div>
 
       {/* PERMISSION MODAL */}
-      {selectedFile && (
-        <PermissionModal
-          file={selectedFile}
-          onClose={() => setSelectedFile(null)}
-        />
-      )}
+      {selectedFile && <PermissionModal file={selectedFile} onClose={() => setSelectedFile(null)} />}
     </motion.div>
   );
 }
