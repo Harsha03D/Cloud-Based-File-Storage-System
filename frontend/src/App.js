@@ -13,7 +13,7 @@ import Analytics from "./pages/Analytics";
 import Activities from "./pages/Activities";
 import Upload from "./pages/Upload";
 import About from "./pages/About";
-import ErrorPage from "./pages/ErrorPage"; // FIXED IMPORT NAME
+import ErrorPage from "./pages/Error"; // FIXED IMPORT NAME
 
 // ---------------------------------------------
 // 🔐 Private Route Wrapper
