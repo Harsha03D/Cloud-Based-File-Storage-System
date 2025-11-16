@@ -1,12 +1,30 @@
-// src/services/api.js
+import { CognitoUser, AuthenticationDetails } from "amazon-cognito-identity-js";
+import poolData from "./cognito";
 
-// 👉 Your API Gateway Invoke URL
-export const API_BASE = "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
+export function login(email, password) {
+  return new Promise((resolve, reject) => {
+    const authenticationData = {
+      Username: email,
+      Password: password,
+    };
 
-// ✔ Endpoints
-export const ENDPOINTS = {
-  LIST_FILES: `${API_BASE}/files`,         // GET
-  DOWNLOAD_FILE: `${API_BASE}/download-url`, // GET ?key=
-  UPLOAD_URL: `${API_BASE}/upload-url`,     // POST
-  DELETE_FILE: `${API_BASE}/delete-file`    // DELETE ?key=
-};
+    const authenticationDetails = new AuthenticationDetails(authenticationData);
+    const userData = {
+      Username: email,
+      Pool: poolData,
+    };
+
+    const cognitoUser = new CognitoUser(userData);
+
+    cognitoUser.authenticateUser(authenticationDetails, {
+      onSuccess: (result) => {
+        const token = result.getIdToken().getJwtToken();
+        resolve({ success: true, token });
+      },
+
+      onFailure: (err) => {
+        reject({ success: false, message: err.message || "Login failed" });
+      },
+    });
+  });
+}

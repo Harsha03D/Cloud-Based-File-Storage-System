@@ -1,7 +1,12 @@
 // src/pages/Login.js
+
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const API_BASE =
+  "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
 
 const defaultConfig = {
   welcome_title: "Welcome back to CloudSafe",
@@ -12,10 +17,8 @@ const defaultConfig = {
   forgot_password: "Forgot password?",
   signup_text: "Don't have an account?",
   signup_link: "Sign up",
-  primary_color: "#6366f1", // Indigo
-  secondary_color: "#8b5cf6", // Purple
-  background_color: "#eef2ff", // Light Indigo
-  surface_color: "#ffffff",
+  primary_color: "#6366f1",
+  secondary_color: "#8b5cf6",
   text_color: "#1e293b",
   font_family: "Inter",
   font_size: 16,
@@ -24,10 +27,12 @@ const defaultConfig = {
 function Login() {
   const navigate = useNavigate();
   const [config] = useState(defaultConfig);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const {
     primary_color,
@@ -37,19 +42,37 @@ function Login() {
     font_family,
   } = config;
 
-  // Apply the new gradient background
+  // Apply gradient background
   useEffect(() => {
     document.body.style.background = `linear-gradient(135deg, ${primary_color}, ${secondary_color}, #7dd3fc)`;
     document.body.style.fontFamily = `${font_family}, sans-serif`;
-  }, [primary_color, secondary_color, font_family]);
+  }, []);
 
-  const handleSubmit = (e) => {
+  // 1️⃣ LOGIN FUNCTION — connects to your Cognito login Lambda
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setErrorMessage("");
+
+    try {
+      const res = await axios.post(`${API_BASE}/login`, {
+        email,
+        password,
+      });
+
+      // Store Cognito JWT token
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("email", email);
+
+      // Navigate to dashboard
       navigate("/dashboard");
-    }, 1500);
+    } catch (err) {
+      setErrorMessage(
+        err.response?.data?.message || "Invalid email or password"
+      );
+    }
+
+    setIsLoading(false);
   };
 
   const handleSignup = () => navigate("/signup");
@@ -71,10 +94,10 @@ function Login() {
         overflow: "hidden",
       }}
     >
-      {/* ☁️ Floating Icons */}
+      {/* Floating icons */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 6, repeat: Infinity }}
         style={{
           position: "absolute",
           top: "10%",
@@ -88,7 +111,7 @@ function Login() {
 
       <motion.div
         animate={{ y: [0, 25, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 8, repeat: Infinity }}
         style={{
           position: "absolute",
           bottom: "15%",
@@ -102,7 +125,7 @@ function Login() {
 
       <motion.div
         animate={{ y: [0, -15, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 10, repeat: Infinity }}
         style={{
           position: "absolute",
           top: "60%",
@@ -114,7 +137,7 @@ function Login() {
         🔒
       </motion.div>
 
-      {/* 🏠 Home & Back Buttons */}
+      {/* Home / Back */}
       <div
         style={{
           position: "absolute",
@@ -126,7 +149,6 @@ function Login() {
       >
         <motion.button
           whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
           onClick={handleBack}
           style={{
             background: "#ffffff",
@@ -143,7 +165,6 @@ function Login() {
 
         <motion.button
           whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
           onClick={handleHome}
           style={{
             background: `linear-gradient(135deg, ${primary_color}, ${secondary_color})`,
@@ -159,11 +180,11 @@ function Login() {
         </motion.button>
       </div>
 
-      {/* 💫 Login Card */}
+      {/* Login Card */}
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+        transition={{ duration: 0.8 }}
         style={{
           backgroundColor: "#ffffff",
           borderRadius: "20px",
@@ -175,10 +196,10 @@ function Login() {
           textAlign: "center",
         }}
       >
-        {/* ☁️ Logo */}
+        {/* Logo */}
         <motion.div
           animate={{ rotate: [0, 5, -5, 0] }}
-          transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+          transition={{ repeat: Infinity, duration: 6 }}
           style={{
             width: "80px",
             height: "80px",
@@ -217,7 +238,7 @@ function Login() {
           {config.welcome_subtitle}
         </p>
 
-        {/* 🧾 Form */}
+        {/* Login Form */}
         <form
           onSubmit={handleSubmit}
           style={{
@@ -227,7 +248,7 @@ function Login() {
             textAlign: "left",
           }}
         >
-          {/* Email Field */}
+          {/* Email */}
           <div>
             <label
               htmlFor="email"
@@ -238,10 +259,10 @@ function Login() {
             <input
               type="email"
               id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               style={{
                 width: "100%",
                 padding: "14px 16px",
@@ -253,7 +274,7 @@ function Login() {
             />
           </div>
 
-          {/* Password Field */}
+          {/* Password */}
           <div>
             <label
               htmlFor="password"
@@ -261,14 +282,15 @@ function Login() {
             >
               {config.password_label}
             </label>
+
             <div style={{ position: "relative" }}>
               <input
                 type={showPassword ? "text" : "password"}
                 id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 style={{
                   width: "100%",
                   padding: "14px 16px",
@@ -279,6 +301,7 @@ function Login() {
                   fontSize: font_size,
                 }}
               />
+
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -298,24 +321,19 @@ function Login() {
             </div>
           </div>
 
-          {/* Forgot Password */}
-          <div style={{ textAlign: "right" }}>
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                alert("Password reset link sent!");
-              }}
+          {/* Error message */}
+          {errorMessage && (
+            <p
               style={{
-                fontSize: `${font_size * 0.9}px`,
-                color: primary_color,
-                textDecoration: "none",
+                color: "red",
                 fontWeight: 600,
+                fontSize: "0.9rem",
+                marginTop: "-10px",
               }}
             >
-              {config.forgot_password}
-            </a>
-          </div>
+              {errorMessage}
+            </p>
+          )}
 
           {/* Login Button */}
           <motion.button

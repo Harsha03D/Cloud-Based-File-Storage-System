@@ -20,7 +20,7 @@ const defaultConfig = {
 };
 
 function Landing() {
-  const [config, setConfig] = useState(defaultConfig);
+  const [config] = useState(defaultConfig);
   const navigate = useNavigate();
 
   const handleLogin = () => navigate("/login");
@@ -42,7 +42,7 @@ function Landing() {
   return (
     <div
       style={{
-        minHeight: "100%",
+        minHeight: "100vh",
         backgroundColor: background_color,
         fontFamily: "Inter, sans-serif",
         overflow: "hidden",
@@ -75,9 +75,12 @@ function Landing() {
           >
             ☁️
           </motion.div>
-          <h1 style={{ fontSize: "3rem", fontWeight: 800, marginBottom: "16px" }}>
-            {hero_tagline}
-          </h1>
+          <h1 style={{ fontSize: "3.2rem", fontWeight: 800 }}>
+            CloudSafe
+            </h1>
+            <h2 style={{ fontSize: "2rem", fontWeight: 700, opacity: 0.9 }}>
+              {hero_tagline}
+              </h2>
           <p
             style={{
               fontSize: "1.25rem",

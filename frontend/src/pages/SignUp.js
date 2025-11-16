@@ -1,7 +1,12 @@
 // src/pages/SignUp.js
+
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const API_BASE =
+  "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
 
 const defaultConfig = {
   page_title: "Create Your Account",
@@ -13,9 +18,9 @@ const defaultConfig = {
   signup_button: "Sign Up",
   login_text: "Already have an account?",
   login_link: "Login here",
-  primary_color: "#6366f1", // Indigo
-  secondary_color: "#8b5cf6", // Purple
-  background_color: "#eef2ff", // Light indigo
+  primary_color: "#6366f1",
+  secondary_color: "#8b5cf6",
+  background_color: "#eef2ff",
   surface_color: "#ffffff",
   text_color: "#1e293b",
   font_family: "Inter",
@@ -25,17 +30,20 @@ const defaultConfig = {
 function SignUp() {
   const navigate = useNavigate();
   const [config] = useState(defaultConfig);
+
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [errors, setErrors] = useState({});
+  const [signupError, setSignupError] = useState("");
 
   const {
     primary_color,
@@ -45,11 +53,13 @@ function SignUp() {
     font_family,
   } = config;
 
+  // background
   useEffect(() => {
     document.body.style.background = `linear-gradient(135deg, ${primary_color}, ${secondary_color}, #7dd3fc)`;
     document.body.style.fontFamily = `${font_family}, sans-serif`;
-  }, [primary_color, secondary_color, font_family]);
+  }, []);
 
+  // Password strength
   const calculatePasswordStrength = (password) => {
     let strength = 0;
     if (password.length >= 8) strength += 25;
@@ -73,42 +83,64 @@ function SignUp() {
     return "Strong";
   };
 
+  // Input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    if (name === "password") setPasswordStrength(calculatePasswordStrength(value));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+    setFormData((p) => ({ ...p, [name]: value }));
+    if (name === "password")
+      setPasswordStrength(calculatePasswordStrength(value));
+    if (errors[name]) setErrors((p) => ({ ...p, [name]: "" }));
+    setSignupError("");
   };
 
+  // validation
   const validateForm = () => {
     const newErrors = {};
     if (!formData.fullName.trim()) newErrors.fullName = "Full name is required";
     if (!formData.email.trim()) newErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
       newErrors.email = "Enter a valid email";
+
     if (!formData.password) newErrors.password = "Password is required";
     else if (formData.password.length < 8)
       newErrors.password = "Password must be at least 8 characters";
+
     if (!formData.confirmPassword)
       newErrors.confirmPassword = "Please confirm your password";
     else if (formData.password !== formData.confirmPassword)
       newErrors.confirmPassword = "Passwords do not match";
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  // ⭐ Create Cognito User
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
-      alert("Please fix the errors in the form");
       return;
     }
+
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    setSignupError("");
+
+    try {
+      const res = await axios.post(`${API_BASE}/signup`, {
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      alert("Account created successfully!");
       navigate("/login");
-    }, 1500);
+
+    } catch (err) {
+      setSignupError(
+        err.response?.data?.message || "Signup failed. Try again."
+      );
+    }
+
+    setIsLoading(false);
   };
 
   const handleBack = () => navigate(-1);
@@ -129,10 +161,10 @@ function SignUp() {
         overflow: "hidden",
       }}
     >
-      {/* ☁️ Floating icons */}
+      {/* floating icons */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 6, repeat: Infinity }}
         style={{
           position: "absolute",
           top: "10%",
@@ -146,7 +178,7 @@ function SignUp() {
 
       <motion.div
         animate={{ y: [0, 25, 0] }}
-        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 7, repeat: Infinity }}
         style={{
           position: "absolute",
           bottom: "10%",
@@ -160,7 +192,7 @@ function SignUp() {
 
       <motion.div
         animate={{ y: [0, -15, 0] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        transition={{ duration: 10, repeat: Infinity }}
         style={{
           position: "absolute",
           top: "65%",
@@ -172,7 +204,7 @@ function SignUp() {
         🔒
       </motion.div>
 
-      {/* 🏠 Home & Back Buttons */}
+      {/* Home + Back buttons */}
       <div
         style={{
           position: "absolute",
@@ -184,15 +216,13 @@ function SignUp() {
       >
         <motion.button
           whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
           onClick={handleBack}
           style={{
-            background: "#ffffff",
+            background: "#fff",
             border: `2px solid ${primary_color}`,
-            borderRadius: "8px",
-            padding: "8px 16px",
-            cursor: "pointer",
             color: primary_color,
+            padding: "8px 16px",
+            borderRadius: "10px",
             fontWeight: 600,
           }}
         >
@@ -201,14 +231,12 @@ function SignUp() {
 
         <motion.button
           whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
           onClick={handleHome}
           style={{
             background: `linear-gradient(135deg, ${primary_color}, ${secondary_color})`,
-            border: "none",
-            borderRadius: "8px",
             padding: "8px 16px",
-            cursor: "pointer",
+            borderRadius: "10px",
+            border: "none",
             color: "white",
             fontWeight: 600,
           }}
@@ -217,35 +245,37 @@ function SignUp() {
         </motion.button>
       </div>
 
-      {/* SignUp Card */}
+      {/* Signup Card */}
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+        transition={{ duration: 0.8 }}
         style={{
-          backgroundColor: "#ffffff",
+          backgroundColor: "#fff",
           borderRadius: "24px",
-          boxShadow: "0 25px 70px rgba(0, 0, 0, 0.12)",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
           padding: "48px",
           maxWidth: "520px",
           width: "100%",
-          zIndex: 1,
+          zIndex: 2,
         }}
       >
+        {/* Logo */}
         <motion.div
           animate={{ rotate: [0, 5, -5, 0] }}
-          transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+          transition={{ repeat: Infinity, duration: 6 }}
           style={{
             width: "90px",
             height: "90px",
             margin: "0 auto 20px",
             background: `linear-gradient(135deg, ${primary_color}, ${secondary_color})`,
-            borderRadius: "22px",
+            borderRadius: "20px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            color: "white",
             fontSize: "48px",
-            boxShadow: `0 12px 35px ${primary_color}50`,
+            boxShadow: `0 10px 30px ${primary_color}50`,
           }}
         >
           ☁️
@@ -262,6 +292,7 @@ function SignUp() {
         >
           {config.page_title}
         </h1>
+
         <p
           style={{
             textAlign: "center",
@@ -273,13 +304,29 @@ function SignUp() {
           {config.page_subtitle}
         </p>
 
-        {/* Form */}
+        {/* Signup error */}
+        {signupError && (
+          <p
+            style={{
+              color: "#ef4444",
+              fontWeight: 600,
+              marginBottom: "10px",
+              textAlign: "center",
+            }}
+          >
+            {signupError}
+          </p>
+        )}
+
+        {/* FORM */}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          
           {/* Full Name */}
           <div>
-            <label style={{ fontWeight: 600, color: text_color }}>{config.name_label}</label>
+            <label style={{ fontWeight: 600, color: text_color }}>
+              {config.name_label}
+            </label>
             <input
-              type="text"
               name="fullName"
               value={formData.fullName}
               onChange={handleInputChange}
@@ -317,7 +364,10 @@ function SignUp() {
 
           {/* Password */}
           <div>
-            <label style={{ fontWeight: 600, color: text_color }}>{config.password_label}</label>
+            <label style={{ fontWeight: 600, color: text_color }}>
+              {config.password_label}
+            </label>
+
             <div style={{ position: "relative" }}>
               <input
                 type={showPassword ? "text" : "password"}
@@ -334,6 +384,7 @@ function SignUp() {
                   marginTop: "8px",
                 }}
               />
+
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -342,9 +393,8 @@ function SignUp() {
                   right: "12px",
                   top: "50%",
                   transform: "translateY(-50%)",
-                  background: "none",
                   border: "none",
-                  cursor: "pointer",
+                  background: "none",
                   fontSize: "18px",
                 }}
               >
@@ -352,6 +402,7 @@ function SignUp() {
               </button>
             </div>
 
+            {/* Password strength bar */}
             {formData.password && (
               <div style={{ marginTop: "8px" }}>
                 <div
@@ -376,12 +427,16 @@ function SignUp() {
                 </p>
               </div>
             )}
+
             {errors.password && <p style={{ color: "#ef4444" }}>{errors.password}</p>}
           </div>
 
           {/* Confirm Password */}
           <div>
-            <label style={{ fontWeight: 600, color: text_color }}>{config.confirm_password_label}</label>
+            <label style={{ fontWeight: 600, color: text_color }}>
+              {config.confirm_password_label}
+            </label>
+
             <div style={{ position: "relative" }}>
               <input
                 type={showConfirmPassword ? "text" : "password"}
@@ -398,6 +453,7 @@ function SignUp() {
                   marginTop: "8px",
                 }}
               />
+
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -406,35 +462,36 @@ function SignUp() {
                   right: "12px",
                   top: "50%",
                   transform: "translateY(-50%)",
-                  background: "none",
                   border: "none",
-                  cursor: "pointer",
+                  background: "none",
                   fontSize: "18px",
                 }}
               >
                 {showConfirmPassword ? "🙈" : "👁️"}
               </button>
             </div>
-            {errors.confirmPassword && <p style={{ color: "#ef4444" }}>{errors.confirmPassword}</p>}
+
+            {errors.confirmPassword && (
+              <p style={{ color: "#ef4444" }}>{errors.confirmPassword}</p>
+            )}
           </div>
 
-          {/* Sign Up Button */}
+          {/* Signup Button */}
           <motion.button
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
             type="submit"
             disabled={isLoading}
             style={{
               width: "100%",
               padding: "16px",
-              fontSize: `${font_size * 1.125}px`,
+              borderRadius: "12px",
+              border: "none",
+              fontSize: `${font_size * 1.1}px`,
               fontWeight: 700,
               color: "white",
               background: `linear-gradient(135deg, ${primary_color}, ${secondary_color})`,
-              border: "none",
-              borderRadius: "12px",
-              cursor: isLoading ? "not-allowed" : "pointer",
               opacity: isLoading ? 0.7 : 1,
+              cursor: isLoading ? "not-allowed" : "pointer",
             }}
           >
             {isLoading ? "Creating account..." : config.signup_button}
@@ -443,13 +500,13 @@ function SignUp() {
           <p style={{ textAlign: "center", color: text_color, marginTop: "12px" }}>
             {config.login_text}{" "}
             <span
-              onClick={() => navigate("/login")}
               style={{
                 color: primary_color,
                 fontWeight: 600,
                 cursor: "pointer",
                 textDecoration: "underline",
               }}
+              onClick={() => navigate("/login")}
             >
               {config.login_link}
             </span>

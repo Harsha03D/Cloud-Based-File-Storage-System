@@ -18,15 +18,30 @@ export default function FileManagement() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [error, setError] = useState(null);
 
-  // Fetch files from backend
+  // 🔐 Protect page → If token missing, go to login
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) navigate("/login");
+  }, [navigate]);
+
+  // Add auth header
+  const authHeaders = () => ({
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+
+  // 📌 Fetch files
   const fetchFiles = async () => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/files`);
+      const res = await axios.get(`${API_BASE}/files`, authHeaders());
+
       setFiles(res.data.files || []);
       setFilteredFiles(res.data.files || []);
       setError(null);
     } catch (err) {
+      console.error(err);
       setError("Failed to load files");
     }
     setIsLoading(false);
@@ -36,6 +51,7 @@ export default function FileManagement() {
     fetchFiles();
   }, []);
 
+  // 📌 Filter search results
   useEffect(() => {
     setFilteredFiles(
       files.filter((file) =>
@@ -44,36 +60,39 @@ export default function FileManagement() {
     );
   }, [searchQuery, files]);
 
-  // Download file
+  // 📥 Download file
   const handleDownload = async (file) => {
     try {
-      const res = await axios.get(`${API_BASE}/download-url?key=${file.key}`);
-      const url = res.data.url;
+      const res = await axios.get(
+        `${API_BASE}/download-url?key=${file.key}`,
+        authHeaders()
+      );
 
       const link = document.createElement("a");
-      link.href = url;
+      link.href = res.data.url;
       link.download = file.key;
       link.click();
-    } catch {
+    } catch (err) {
       alert("Download failed");
     }
   };
 
-  // Delete file
+  // 🗑 Delete file
   const handleDelete = async (file) => {
     try {
       await axios.delete(`${API_BASE}/delete-file`, {
         data: { key: file.key },
+        ...authHeaders(),
       });
 
       setFiles((prev) => prev.filter((f) => f.key !== file.key));
       setConfirmDeleteId(null);
-    } catch {
+    } catch (err) {
       alert("Delete failed");
     }
   };
 
-  // Icons by file type
+  // Icon selection
   const getFileIcon = (name) => {
     if (!name) return "📁";
     const ext = name.split(".").pop().toLowerCase();
@@ -104,7 +123,7 @@ export default function FileManagement() {
   const formatDate = (d) =>
     d ? new Date(d).toLocaleString() : "Unknown";
 
-  // Loading screen
+  // 🔄 Loading screen
   if (isLoading)
     return (
       <motion.div
@@ -119,7 +138,7 @@ export default function FileManagement() {
       </motion.div>
     );
 
-  // Error screen
+  // ❌ Error screen
   if (error)
     return (
       <motion.div
@@ -140,6 +159,7 @@ export default function FileManagement() {
       </motion.div>
     );
 
+  // MAIN UI
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -165,7 +185,7 @@ export default function FileManagement() {
         📁
       </motion.div>
 
-      {/* Back & Home */}
+      {/* Navigation */}
       <div className="absolute top-5 left-5 flex gap-3 z-20">
         <motion.button
           whileHover={{ scale: 1.1 }}
@@ -191,15 +211,11 @@ export default function FileManagement() {
         className="mt-16 mb-8"
       >
         <h1 className="text-3xl font-bold text-gray-800">File Management</h1>
-        <p className="text-gray-600">
-          Manage your uploaded files easily
-        </p>
+        <p className="text-gray-600">Manage your uploaded files easily</p>
       </motion.header>
 
       {/* Search */}
-      <motion.input
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+      <input
         type="text"
         placeholder="Search files..."
         value={searchQuery}
@@ -241,9 +257,14 @@ export default function FileManagement() {
             >
               <div className="flex items-start gap-3 mb-3">
                 <div className="text-4xl">{getFileIcon(file.key)}</div>
+
                 <div className="truncate">
-                  <h3 className="font-semibold text-gray-800 truncate">{file.key}</h3>
-                  <p className="text-gray-500 text-sm">{formatSize(file.size)}</p>
+                  <h3 className="font-semibold text-gray-800 truncate">
+                    {file.key}
+                  </h3>
+                  <p className="text-gray-500 text-sm">
+                    {formatSize(file.size)}
+                  </p>
                 </div>
               </div>
 
@@ -264,6 +285,7 @@ export default function FileManagement() {
                     >
                       Yes
                     </button>
+
                     <button
                       onClick={() => setConfirmDeleteId(null)}
                       className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg"

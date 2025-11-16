@@ -8,7 +8,7 @@ import axios from "axios";
 
 const API_BASE = "https://t7z7i3v7ua.execute-api.eu-north-1.amazonaws.com/prod";
 
-// Toast message
+// Toast
 function toast(msg, color = "#10b981") {
   const t = document.createElement("div");
   t.style.cssText = `
@@ -39,11 +39,23 @@ export default function Dashboard() {
   const secondary = "#8b5cf6";
   const accent = "#38bdf8";
 
-  // FETCH FILES FROM BACKEND
+  // 🔐 PROTECT DASHBOARD
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) navigate("/login");
+  }, [navigate]);
+
+  const getAuthHeaders = () => ({
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+
+  // 📂 FETCH FILES
   const fetchFiles = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/files`);
+      const res = await axios.get(`${API_BASE}/files`, getAuthHeaders());
       setFiles(res.data.files || []);
     } catch (err) {
       toast("Failed to fetch files", "#ef4444");
@@ -55,24 +67,31 @@ export default function Dashboard() {
     fetchFiles();
   }, []);
 
-  // DOWNLOAD FILE
+  // 📥 DOWNLOAD
   const openFile = async (file) => {
     try {
-      const res = await axios.get(`${API_BASE}/download-url?key=${file.key}`);
+      const res = await axios.get(
+        `${API_BASE}/download-url?key=${file.key}`,
+        getAuthHeaders()
+      );
       window.open(res.data.url, "_blank");
     } catch {
       toast("Unable to open file", "#ef4444");
     }
   };
 
-  // DELETE FILE
+  // 🗑 DELETE
   const deleteFile = async (file) => {
     if (!window.confirm(`Delete "${file.key}" permanently?`)) return;
 
     try {
-      await axios.delete(`${API_BASE}/delete-file`, {
-        data: { key: file.key },
-      });
+      await axios.delete(
+        `${API_BASE}/delete-file`,
+        {
+          data: { key: file.key },
+          ...getAuthHeaders(),
+        }
+      );
 
       toast("File deleted successfully");
       fetchFiles();
@@ -102,7 +121,7 @@ export default function Dashboard() {
         padding: "24px",
       }}
     >
-      {/* Floating icons */}
+      {/* FLOATING ICONS */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
         transition={{ duration: 6, repeat: Infinity }}
@@ -145,7 +164,7 @@ export default function Dashboard() {
         🔒
       </motion.div>
 
-      {/* Back & Home */}
+      {/* NAV BUTTONS */}
       <div
         style={{
           position: "absolute",
@@ -186,7 +205,7 @@ export default function Dashboard() {
         </motion.button>
       </div>
 
-      {/* Main Card */}
+      {/* MAIN CARD */}
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -217,7 +236,7 @@ export default function Dashboard() {
           ☁️ Cloud Dashboard
         </motion.h1>
 
-        {/* Search & Refresh */}
+        {/* Search */}
         <div
           style={{
             display: "flex",
@@ -258,7 +277,7 @@ export default function Dashboard() {
           </motion.button>
         </div>
 
-        {/* File Table */}
+        {/* FILE TABLE */}
         <div
           style={{
             background: "rgba(255,255,255,0.15)",
@@ -267,9 +286,7 @@ export default function Dashboard() {
             overflowX: "auto",
           }}
         >
-          <table
-            style={{ width: "100%", color: "#fff", borderCollapse: "collapse" }}
-          >
+          <table style={{ width: "100%", color: "#fff", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "2px solid rgba(255,255,255,0.2)" }}>
                 <th style={{ padding: "12px", textAlign: "left" }}>Name</th>
@@ -299,15 +316,14 @@ export default function Dashboard() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    style={{
-                      borderBottom: "1px solid rgba(255,255,255,0.1)",
-                    }}
+                    style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}
                   >
                     <td style={{ padding: "10px" }}>{file.key}</td>
                     <td style={{ padding: "10px" }}>{file.size || "--"}</td>
                     <td style={{ padding: "10px" }}>{file.lastModified || "--"}</td>
 
                     <td style={{ padding: "10px", textAlign: "center" }}>
+                      
                       <button
                         onClick={() => openFile(file)}
                         style={{
@@ -376,9 +392,12 @@ export default function Dashboard() {
         </div>
       </motion.div>
 
-      {/* Permission Modal */}
+      {/* PERMISSION MODAL */}
       {selectedFile && (
-        <PermissionModal file={selectedFile} onClose={() => setSelectedFile(null)} />
+        <PermissionModal
+          file={selectedFile}
+          onClose={() => setSelectedFile(null)}
+        />
       )}
     </motion.div>
   );

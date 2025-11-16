@@ -82,13 +82,13 @@ const ErrorPage = ({
 
   const handleNavigation = (destination) => {
     if (onNavigate) onNavigate(destination);
-    else navigate(`/${destination}`);
-  };
+    else navigate(destination ? `/${destination}` : "/"); 
+   };
 
   const handleGoHome = () => handleNavigation("");
   const handleGoDashboard = () => handleNavigation("dashboard");
   const handleLogin = () => handleNavigation("login");
-  const handleGoBack = () => window.history.back();
+  const handleGoBack = () => navigate(-1);
   const handleContactSupport = () => handleNavigation("support");
 
   const getActionButtons = () => {

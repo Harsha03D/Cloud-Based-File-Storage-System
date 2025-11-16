@@ -1,20 +1,7 @@
 // src/App.js
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-/*
-  Make sure these files exist under src/pages and default-export their components:
-    - Landing.js        -> export default Landing
-    - Login.js          -> export default Login
-    - Signup.js         -> export default Signup
-    - Dashboard.js      -> export default Dashboard
-    - UserInfo.js       -> export default UserInfo
-    - FileManagement.js -> export default FileManagement
-    - Analytics.js      -> export default Analytics
-    - Activities.js     -> export default Activities
-    - Upload.js         -> export default Upload
-    - Error.js          -> export default ErrorPage  (or adjust import name)
-*/
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -25,41 +12,100 @@ import FileManagement from "./pages/FileManagement";
 import Analytics from "./pages/Analytics";
 import Activities from "./pages/Activities";
 import Upload from "./pages/Upload";
-import ErrorPage from "./pages/Error";
 import About from "./pages/About";
+import ErrorPage from "./pages/ErrorPage"; // FIXED IMPORT NAME
 
-function App() {
+// ---------------------------------------------
+// 🔐 Private Route Wrapper
+// ---------------------------------------------
+const PrivateRoute = ({ children }) => {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+};
+
+export default function App() {
   return (
     <Router>
       <Routes>
-        {/* Public / landing */}
-        <Route path="/" element={<Landing />} />
 
-        {/* Auth */}
+        {/* Public Routes */}
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-
-        {/* Main app */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/userinfo" element={<UserInfo />} />
-
-        {/* Files */}
-        <Route path="/files" element={<FileManagement />} />
-        <Route path="/files/upload" element={<Upload />} />
-        {/* optional file detail route */}
-        <Route path="/files/:fileId" element={<FileManagement />} />
-
-        {/* Activity & Analytics */}
-        <Route path="/activities" element={<Activities />} />
-        <Route path="/analytics" element={<Analytics />} />
         <Route path="/about" element={<About />} />
 
+        {/* Protected Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          }
+        />
 
-        {/* Fallback / error */}
+        <Route
+          path="/userinfo"
+          element={
+            <PrivateRoute>
+              <UserInfo />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/files"
+          element={
+            <PrivateRoute>
+              <FileManagement />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/files/upload"
+          element={
+            <PrivateRoute>
+              <Upload />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/files/:fileId"
+          element={
+            <PrivateRoute>
+              <FileManagement />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/activities"
+          element={
+            <PrivateRoute>
+              <Activities />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/analytics"
+          element={
+            <PrivateRoute>
+              <Analytics />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ⛔ Error Route */}
         <Route path="*" element={<ErrorPage />} />
       </Routes>
     </Router>
   );
 }
-
-export default App;
